@@ -11,7 +11,7 @@ Runs on your LAN, including on a Raspberry Pi. The dashboard and restart control
 - **Named restart groups** spanning one or more switches, with shared-port cooldowns to prevent repeated restarts.
 - **Live health status** for internet connectivity, DNS and UniFi, with optional recovery monitoring.
 - **Restart history** showing who requested each restart and what happened to each target.
-- **Simple administration** for connection settings, users, groups, monitoring and passwords. Browse switches in collapsible sections with clickable, 12-column port grids.
+- **Simple administration** for connection settings, users, groups, monitoring and passwords. Reorder users and groups with up/down buttons. Browse switches in collapsible sections with clickable, 12-column port grids.
 - **Mobile-friendly interface** with a sticky navigation bar, remembered user selection and automatic, light or dark appearance.
 - **Self-contained deployment:** Docker, SQLite and local assets. No cloud login or external database required.
 

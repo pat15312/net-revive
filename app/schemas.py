@@ -1,5 +1,6 @@
 import ipaddress
 import re
+from typing import Literal
 from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -21,30 +22,7 @@ class ChangePassword(StrictModel):
 
 class General(StrictModel):
     title: str = Field(min_length=1, max_length=80)
-    hostname: str = Field(min_length=1, max_length=253)
     timezone: str
-
-    @field_validator("hostname")
-    @classmethod
-    def hostname_valid(cls, value):
-        parsed = urlsplit(value if "://" in value else "http://" + value)
-        if (
-            parsed.scheme not in ("http", "https")
-            or not parsed.hostname
-            or parsed.username
-            or parsed.password
-            or parsed.query
-            or parsed.fragment
-            or parsed.path not in ("", "/")
-        ):
-            raise ValueError("Use a hostname or an HTTP(S) origin without a path.")
-        try:
-            parsed.port
-        except ValueError:
-            raise ValueError("Invalid port.") from None
-        if not re.fullmatch(r"[a-zA-Z0-9.:[\]-]+", parsed.netloc):
-            raise ValueError("Invalid hostname.")
-        return value.rstrip("/")
 
     @field_validator("timezone")
     @classmethod
@@ -138,6 +116,10 @@ class Monitoring(StrictModel):
         if self.recovery_timeout < self.health_interval * self.recovery_successes:
             raise ValueError("Recovery timeout must allow the required number of checks.")
         return self
+
+
+class MoveItem(StrictModel):
+    direction: Literal["up", "down"]
 
 
 class Operator(StrictModel):

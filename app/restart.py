@@ -47,7 +47,7 @@ class RestartService:
             if not setting(conn, "setup_complete", False):
                 raise HTTPException(409, "An administrator must complete setup first.")
             if not conn.execute("SELECT 1 FROM operators WHERE name=?", (operator,)).fetchone():
-                raise HTTPException(422, "Select a configured operator.")
+                raise HTTPException(422, "Select a configured user.")
             row = conn.execute("SELECT * FROM restart_groups WHERE id=?", (group_id,)).fetchone()
             if not row or not row["enabled"]:
                 raise HTTPException(404, "This restart group is not available.")

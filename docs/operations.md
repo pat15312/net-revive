@@ -9,7 +9,7 @@ Generate a local API key through your UniFi Network application's integration se
 | Controller type | API prefix |
 | --- | --- |
 | UniFi OS console | `/proxy/network/integration/v1` |
-| Self-hosted Network application | `/integration/v1` |
+| UniFi Network Server (standalone) | `/integration/v1` |
 
 Supply the controller **origin**, such as `https://controller.lan` or `https://controller.lan:8443`, without a path. An IP address is useful if local DNS might be affected. Keep TLS verification enabled where possible. For a private CA, build a derived image containing that CA in the system trust bundle; alternatively configure a local trusted certificate on the controller. Admin can explicitly disable verification for a self-signed controller, accepting the impersonation risk.
 
@@ -22,11 +22,11 @@ Changing the configured site does not move existing targets or groups to that si
 
 ## Admin sections
 
-- **General:** display title, preferred local hostname/URL and timezone.
-- **Users:** add, edit, remove and order operator names.
+- **General:** display title and timezone.
+- **Users:** add, edit and remove user names; use the up/down buttons to reorder them.
 - **Security:** change the administrator password using the current password. Other administrator sessions are signed out. Environment-managed passwords are changed through the container configuration.
 - **UniFi:** connection/key settings, site selection, connection test, discovery, target labels and enabled flags.
-- **Restart Groups:** create, edit, disable, order and delete groups; assign any number of discovered targets; customize buttons, descriptions, lockouts and recovery modes.
+- **Restart Groups:** create, edit, disable and delete groups; reorder them with up/down buttons; assign any number of discovered targets; customize buttons, descriptions, lockouts and recovery modes.
 - **Health Monitoring:** intervals, timeouts, stable-recovery checks, DNS names and IP connectivity destinations.
 - **Restart History:** paginated events, per-target details, pre-restart health, recovery outcomes and original configuration snapshots.
 
@@ -50,9 +50,9 @@ The status differentiates healthy connectivity, DNS trouble, internet trouble an
 
 ## Local DNS and friendly hostname
 
-Create a local DNS record pointing `net-revive.lan` (or your chosen hostname) to the Docker host. Configure your LAN DNS server/router; NetRevive does not change DNS records. If using the default port, browse to `http://net-revive.lan:8080`, and store that full origin as the friendly URL if desired. For a portless URL, use a local reverse proxy or map host port 80 to container port 8080.
+Create a local DNS record pointing `net-revive.lan` (or your chosen hostname) to the Docker host. Configure your LAN DNS server/router; NetRevive does not change DNS records. If using the default port, browse to `http://net-revive.lan:8080`. For a portless URL, use a local reverse proxy or map host port 80 to container port 8080.
 
-The friendly hostname/URL setting is stored as the HTML canonical link (page metadata). It does not configure DNS, a reverse proxy, or the listening address. NetRevive has no footer displaying it. Direct IP/alternate-host access is intentionally preserved for DNS failures; NetRevive does not redirect or enforce a Host allowlist. For HTTPS proxying, preserve `Host` and the original `Origin`, set `COOKIE_SECURE=true`, and configure Uvicorn to trust forwarded scheme headers **only from that proxy's IP**. The default command disables proxy headers; replace that option with `--proxy-headers --forwarded-allow-ips=<proxy-ip>` when deploying behind the proxy. No wildcard proxy trust is needed.
+Direct IP/alternate-host access is intentionally preserved for DNS failures; NetRevive does not redirect or enforce a Host allowlist. For HTTPS proxying, preserve `Host` and the original `Origin`, set `COOKIE_SECURE=true`, and configure Uvicorn to trust forwarded scheme headers **only from that proxy's IP**. The default command disables proxy headers; replace that option with `--proxy-headers --forwarded-allow-ips=<proxy-ip>` when deploying behind the proxy. No wildcard proxy trust is needed.
 
 
 ## Persistence, secrets and backup
@@ -73,7 +73,7 @@ chmod 600 netrevive-backup.db netrevive-secret.key
 
 If `SECRET_KEY` is set, back it up separately instead of copying `secret.key`. Never copy only the live `.db` file while writes are occurring, because committed data may still be in the WAL. Alternatively stop the service and back up the complete volume.
 
-To restore, stop NetRevive, restore the backup and matching key into the volume, remove obsolete WAL/SHM files **only while the service is stopped**, ensure UID/GID `10001` owns the restored files, then start it. A restored old database can lack more recent lockouts; wait at least your longest cooldown and confirm equipment state before enabling operators. Schema version 1 is initialized automatically; newer unknown schemas are rejected rather than silently downgraded.
+To restore, stop NetRevive, restore the backup and matching key into the volume, remove obsolete WAL/SHM files **only while the service is stopped**, ensure UID/GID `10001` owns the restored files, then start it. A restored old database can lack more recent lockouts; wait at least your longest cooldown and confirm equipment state before enabling users. Schema version 1 is initialized automatically; newer unknown schemas are rejected rather than silently downgraded.
 
 To recover a forgotten admin password, set `ADMIN_PASSWORD` to a new long password and recreate the container. Startup hashes the replacement and invalidates existing sessions. Remove the variable and recreate once more if you want to retain only the database-managed hash.
 
@@ -92,7 +92,7 @@ Application logs are JSON records for startup/shutdown, safe configuration chang
 | Controller unavailable | Local URL/port, controller API support, API-key permissions and TLS trust. Use **Test UniFi connection**. |
 | No sites or ports | Correct controller type/prefix, site access and whether the device details expose PoE ports. Update UniFi if the documented API is unavailable. No legacy fallback is attempted. |
 | A port disappeared | Refresh discovery, review the switch in UniFi and inspect Admin target availability. |
-| Restart unavailable | Selected operator, group enabled state, disabled members, group/target cooldown or in-flight request. |
+| Restart unavailable | Selected user, group enabled state, disabled members, group/target cooldown or in-flight request. |
 | Partial/unknown result | Open detailed history; a timeout can mean UniFi received the request. Do not bypass the cooldown. |
 | DNS fails but IP checks pass | Inspect the container's `/etc/resolv.conf`, host resolver, Docker DNS configuration and LAN DNS server. |
 | Recovery times out | Inspect equipment separately. Wired internet health cannot measure every device's readiness. |
@@ -104,7 +104,7 @@ Application logs are JSON records for startup/shutdown, safe configuration chang
 
 ## Security boundaries
 
-Use a trusted LAN and a host firewall. Do not expose this service to the public internet. Anyone able to use the ordinary dashboard can select a configured operator and trigger its configured restart groups; that is intentional. Admin sessions, CSRF checks, strict input schemas, per-IP/global login throttling, restart rate limits and transactional lockouts protect configuration and repeated actions. Local HTTPS is preferable wherever practical. HTTP on a trusted LAN cannot protect credentials from a network observer.
+Use a trusted LAN and a host firewall. Do not expose this service to the public internet. Anyone able to use the ordinary dashboard can select a configured user and trigger its configured restart groups; that is intentional. Admin sessions, CSRF checks, strict input schemas, per-IP/global login throttling, restart rate limits and transactional lockouts protect configuration and repeated actions. Local HTTPS is preferable wherever practical. HTTP on a trusted LAN cannot protect credentials from a network observer.
 
 There is no general UniFi proxy and no endpoint accepts arbitrary commands, API paths, PoE states or browser-supplied target lists. Target IDs sent to Admin group configuration refer only to already-discovered database records. API validation errors omit submitted secret inputs, and controller errors are sanitized. Secrets are never returned in configuration responses.
 

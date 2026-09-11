@@ -1,4 +1,5 @@
 import sqlite3
+from typing import Literal
 
 from cryptography.fernet import InvalidToken
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -6,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from .database import put_setting, setting
 from .logging import audit
 from .restart import group_targets, history
-from .schemas import General, Group, Monitoring, Operator, TargetEdit, UniFiSettings
+from .schemas import General, Group, Monitoring, MoveItem, Operator, TargetEdit, UniFiSettings
 from .security import require_admin
 from .unifi import UniFiError
 
@@ -160,16 +161,53 @@ def edit_target(target_id: int, body: TargetEdit, request: Request):
     return {"ok": True}
 
 
+def ordered_ids(conn, table):
+    # Table names are supplied only by the fixed internal mapping/call sites.
+    return [row[0] for row in conn.execute(f"SELECT id FROM {table} ORDER BY display_order,id")]
+
+
+def save_order(conn, table, ids):
+    conn.executemany(f"UPDATE {table} SET display_order=? WHERE id=?", enumerate(ids))
+
+
+def append_order(conn, table):
+    ids = ordered_ids(conn, table)
+    save_order(conn, table, ids)
+    return len(ids)
+
+
+@router.post("/order/{collection}/{item_id}")
+def move_item(collection: Literal["users", "groups"], item_id: int, body: MoveItem, request: Request):
+    table = {"users": "operators", "groups": "restart_groups"}[collection]
+    with request.app.state.db.connect(write=True) as conn:
+        ids = ordered_ids(conn, table)
+        if item_id not in ids:
+            raise HTTPException(404, "Item no longer exists. Refresh the list.")
+        current = ids.index(item_id)
+        destination = current + (-1 if body.direction == "up" else 1)
+        if 0 <= destination < len(ids):
+            ids[current], ids[destination] = ids[destination], ids[current]
+            save_order(conn, table, ids)
+    audit("display_order_changed", collection=collection, item_id=item_id)
+    return {"ok": True}
+
+
 @router.post("/operators", status_code=201)
 def add_operator(body: Operator, request: Request):
     try:
         with request.app.state.db.connect(write=True) as conn:
             row = conn.execute(
-                "INSERT INTO operators(name,display_order) VALUES (?,?)", (body.name, body.display_order)
+                "INSERT INTO operators(name,display_order) VALUES (?,?)",
+                (
+                    body.name,
+                    body.display_order
+                    if "display_order" in body.model_fields_set
+                    else append_order(conn, "operators"),
+                ),
             )
             user_id = row.lastrowid
     except sqlite3.IntegrityError:
-        raise HTTPException(409, "That operator already exists.") from None
+        raise HTTPException(409, "That user already exists.") from None
     audit("operator_added", operator_id=user_id)
     return {"id": user_id}
 
@@ -179,13 +217,17 @@ def edit_operator(operator_id: int, body: Operator, request: Request):
     try:
         with request.app.state.db.connect(write=True) as conn:
             cursor = conn.execute(
-                "UPDATE operators SET name=?,display_order=? WHERE id=?",
-                (body.name, body.display_order, operator_id),
+                "UPDATE operators SET name=?,display_order=COALESCE(?,display_order) WHERE id=?",
+                (
+                    body.name,
+                    body.display_order if "display_order" in body.model_fields_set else None,
+                    operator_id,
+                ),
             )
             if not cursor.rowcount:
-                raise HTTPException(404, "Operator not found.")
+                raise HTTPException(404, "User not found.")
     except sqlite3.IntegrityError:
-        raise HTTPException(409, "That operator already exists.") from None
+        raise HTTPException(409, "That user already exists.") from None
     audit("operator_changed", operator_id=operator_id)
     return {"ok": True}
 
@@ -224,7 +266,9 @@ def write_group(db, body, group_id=None):
             body.button_label,
             body.description,
             body.enabled,
-            body.display_order,
+            body.display_order
+            if "display_order" in body.model_fields_set
+            else (old["display_order"] if old else append_order(conn, "restart_groups")),
             body.lockout_seconds,
             body.recovery_mode,
         )
@@ -281,7 +325,7 @@ async def finish_setup(request: Request):
             raise HTTPException(409, "Configuration changed. Please review setup again.")
         groups = conn.execute("SELECT id FROM restart_groups WHERE enabled=1").fetchall()
         if not groups or not conn.execute("SELECT 1 FROM operators").fetchone():
-            raise HTTPException(422, "Add at least one operator and one enabled restart group.")
+            raise HTTPException(422, "Add at least one user and one enabled restart group.")
         for group in groups:
             targets = group_targets(conn, group["id"])
             if not targets or any(

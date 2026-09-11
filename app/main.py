@@ -258,7 +258,6 @@ def create_app(bootstrap=None):
             "groups": groups,
             "operators": users,
             "title": settings["title"],
-            "hostname": settings["hostname"],
             "timezone": settings["timezone"],
             "events": history(db, limit=8),
         }
@@ -284,16 +283,12 @@ def create_app(bootstrap=None):
     @app.get("/setup")
     def page(request: Request):
         settings = db.settings()
-        canonical = settings["hostname"]
-        if "://" not in canonical:
-            canonical = "http://" + canonical
         return templates.TemplateResponse(
             request=request,
             name="index.html",
             context={
                 "csrf": request.state.session["csrf"],
                 "title": settings["title"],
-                "canonical": canonical,
             },
         )
 

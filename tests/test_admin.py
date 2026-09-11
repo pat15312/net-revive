@@ -71,28 +71,23 @@ def test_login_rate_limit(admin):
 
 
 def test_settings_persist_and_timezone(admin, app):
-    data = {"title": "Recovery console", "hostname": "network-recovery.lan", "timezone": "America/New_York"}
+    data = {"title": "Recovery console", "timezone": "America/New_York"}
     assert admin.request("PUT", "/api/admin/general", data).status_code == 200
     reopened = Database(app.state.db.path)
     assert all(reopened.settings()[key] == value for key, value in data.items())
-    assert admin.get("/api/status").json()["hostname"] == "network-recovery.lan"
+    assert admin.get("/api/status").json()["title"] == "Recovery console"
     data["timezone"] = "invalid/zone"
     assert admin.request("PUT", "/api/admin/general", data).status_code == 422
 
 
-@pytest.mark.parametrize(
-    "hostname",
-    ["javascript:alert(1)", "https://user:password@host.test", "http://host.test/path", "bad hostname"],
-)
-def test_hostname_validation(admin, hostname):
-    assert (
-        admin.request(
-            "PUT",
-            "/api/admin/general",
-            {"title": "NetRevive", "hostname": hostname, "timezone": "Europe/London"},
-        ).status_code
-        == 422
-    )
+def test_retired_hostname_is_not_used(admin, app):
+    from app.database import put_setting
+
+    with app.state.db.connect(write=True) as conn:
+        put_setting(conn, "hostname", "old-hostname.lan")
+    assert "hostname" not in admin.get("/api/admin/config").json()["settings"]
+    assert "hostname" not in admin.get("/api/status").json()
+    assert 'rel="canonical"' not in admin.get("/").text
 
 
 def test_secrets_not_returned(inventory, app):
@@ -413,3 +408,72 @@ def test_password_change_respects_environment_control(admin, app):
     )
     assert response.status_code == 409
     assert admin.request("POST", "/api/login", {"password": PASSWORD}).status_code == 200
+
+
+@pytest.mark.parametrize("collection", ["users", "groups"])
+def test_move_order_persists_without_changing_items(inventory, app, collection):
+    from concurrent.futures import ThreadPoolExecutor
+
+    endpoint, key, table = (
+        ("operators", "operators", "operators")
+        if collection == "users"
+        else ("groups", "groups", "restart_groups")
+    )
+    payload = (lambda name: {"name": name}) if collection == "users" else (lambda name: group([1], name=name))
+    ids = [
+        inventory.request("POST", f"/api/admin/{endpoint}", payload(name)).json()["id"]
+        for name in ["A", "B", "C"]
+    ]
+    # Older installations may contain tied numeric orders.
+    with app.state.db.connect(write=True) as conn:
+        conn.execute(f"UPDATE {table} SET display_order=0")
+    before = inventory.get("/api/admin/config").json()[key]
+
+    def move():
+        return inventory.request("POST", f"/api/admin/order/{collection}/{ids[0]}", {"direction": "down"})
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        assert [r.status_code for r in pool.map(lambda _: move(), range(2))] == [200, 200]
+    after = inventory.get("/api/admin/config").json()[key]
+    assert [row["id"] for row in after] == [ids[1], ids[2], ids[0]]
+    assert [row["display_order"] for row in after] == [0, 1, 2]
+
+    def strip_order(rows):
+        return {row["id"]: {k: v for k, v in row.items() if k != "display_order"} for row in rows}
+
+    assert strip_order(before) == strip_order(after)
+    assert move().status_code == 200  # At bottom: no change, never wrap around.
+    assert inventory.request("PUT", f"/api/admin/{endpoint}/{ids[0]}", payload("Renamed")).status_code == 200
+    extra = inventory.request("POST", f"/api/admin/{endpoint}", payload("New")).json()["id"]
+    ordered = inventory.get("/api/admin/config").json()[key]
+    assert [row["id"] for row in ordered] == [ids[1], ids[2], ids[0], extra]
+    assert (
+        inventory.request("POST", f"/api/admin/order/{collection}/{ids[0]}", {"direction": "up"}).status_code
+        == 200
+    )
+    assert [row["id"] for row in inventory.get("/api/admin/config").json()[key]] == [
+        ids[1],
+        ids[0],
+        ids[2],
+        extra,
+    ]
+    assert (
+        inventory.request("POST", f"/api/admin/order/{collection}/99999", {"direction": "down"}).status_code
+        == 404
+    )
+    assert (
+        inventory.request(
+            "POST", f"/api/admin/order/{collection}/{ids[0]}", {"direction": "sideways"}
+        ).status_code
+        == 422
+    )
+    assert (
+        inventory.client.post(f"/api/admin/order/{collection}/{ids[0]}", json={"direction": "up"}).status_code
+        == 403
+    )
+    inventory.request("POST", "/api/logout")
+    inventory.csrf = inventory.get("/api/session").json()["csrf"]
+    assert (
+        inventory.request("POST", f"/api/admin/order/{collection}/{ids[0]}", {"direction": "up"}).status_code
+        == 401
+    )

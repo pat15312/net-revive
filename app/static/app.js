@@ -162,7 +162,7 @@ function adminView() {
       if (pageTab === "groups" && !config.groups.some((g) => g.enabled))
         throw new Error("Create at least one enabled restart group first.");
       if (pageTab === "users" && !config.operators.length)
-        throw new Error("Add at least one operator first.");
+        throw new Error("Add at least one user first.");
       if (wizardStep === 4) {
         await api("/api/admin/setup/finish", "POST");
         location.href = "/";
@@ -189,7 +189,7 @@ async function reloadConfig() {
 function generalView() {
   const s = config.settings;
   $("#admin-content").innerHTML =
-    `<section class="panel"><h2>A familiar place to reconnect</h2><p>Give your dashboard a title and an easy-to-remember local address.</p><form id="general">${field("Application display title", "title", s.title, "text", 'required maxlength="80"')}${field("Friendly hostname or URL", "hostname", s.hostname, "text", 'required maxlength="253"')}${field("Display timezone", "timezone", s.timezone, "text", 'required list="timezones"')}<datalist id="timezones"><option value="Europe/London"><option value="Etc/UTC"><option value="America/New_York"><option value="America/Los_Angeles"><option value="Europe/Paris"><option value="Asia/Tokyo"><option value="Australia/Sydney"></datalist><div class="notice">This stores the preferred site address in page metadata. It does not create DNS records or change the address or port used to reach NetRevive. To use a friendly address, configure it separately in your local DNS and proxy.</div><button class="primary" type="submit">Save general settings</button></form></section>`;
+    `<section class="panel"><h2>General settings</h2><p>Choose your dashboard title and the timezone used for activity times.</p><form id="general">${field("Application display title", "title", s.title, "text", 'required maxlength="80"')}${field("Display timezone", "timezone", s.timezone, "text", 'required list="timezones"')}<datalist id="timezones"><option value="Europe/London"><option value="Etc/UTC"><option value="America/New_York"><option value="America/Los_Angeles"><option value="Europe/Paris"><option value="Asia/Tokyo"><option value="Australia/Sydney"></datalist><button class="primary" type="submit">Save general settings</button></form></section>`;
   bindForm("general", async (data) => {
     await api("/api/admin/general", "PUT", data);
     await reloadConfig();
@@ -211,10 +211,50 @@ function securityView() {
     toast("Administrator password changed.");
   });
 }
+function orderButtons(collection, item, index, count) {
+  if (count < 2) return "";
+  return `<span class="order-controls">${["up", "down"].map(direction => {
+    const disabled = direction === "up" ? index === 0 : index === count - 1;
+    return `<button type="button" class="secondary order-button" data-order="${collection}" data-item="${item.id}" data-direction="${direction}" aria-label="Move ${esc(item.name)} ${direction}" title="Move ${direction}" ${disabled ? "disabled" : ""}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${direction === "up" ? "m6 14 6-6 6 6" : "m6 10 6 6 6-6"}"/></svg></button>`;
+  }).join("")}</span>`;
+}
+function bindOrdering(collection, render) {
+  document.querySelectorAll(`[data-order="${collection}"]`).forEach(button => {
+    button.onclick = async () => {
+      const {item, direction} = button.dataset;
+      const content = $("#admin-content");
+      const editor = content.querySelector(collection === "users" ? "#user-editor" : "#group-editor");
+      const controlsBefore = [...content.querySelectorAll("button")].map(control => [control, control.disabled]);
+      controlsBefore.forEach(([control]) => { control.disabled = true; });
+      const refreshList = () => {
+        render();
+        // Keep unsaved edits and their event handlers when only the list order changes.
+        if (editor) document.getElementById(editor.id)?.replaceWith(editor);
+      };
+      try {
+        await api(`/api/admin/order/${collection}/${item}`, "POST", {direction});
+        await reloadConfig();
+        // A tab change during the request must not replace the new tab's content.
+        if (pageTab !== collection) return;
+        refreshList();
+        const controls = [...document.querySelectorAll(`[data-order="${collection}"][data-item="${item}"]`)];
+        const focus = controls.find(control => control.dataset.direction === direction && !control.disabled)
+          || controls.find(control => !control.disabled);
+        focus?.focus({preventScroll: true});
+        toast("Order saved.");
+      } catch (error) {
+        if (pageTab === collection) { refreshList(); toast(error.message, true); }
+      } finally {
+        controlsBefore.forEach(([control, disabled]) => { control.disabled = disabled; });
+      }
+    };
+  });
+}
 function usersView() {
   $("#admin-content").innerHTML =
-    `<section class="panel"><h2>Who can restart equipment?</h2><p>These names identify restart activity. Operators use the dashboard without signing in.</p>${config.operators.map((u) => `<div class="list-row"><div><strong>${esc(u.name)}</strong><p>Display order: ${u.display_order}</p></div><div class="actions"><button class="secondary small" data-edit-user="${u.id}">Edit</button><button class="danger small" data-delete-user="${u.id}">Remove</button></div></div>`).join("") || '<p class="notice">Add the people who will use NetRevive.</p>'}<div id="user-editor"></div></section>`;
+    `<section class="panel"><h2>Who can restart equipment?</h2><p>These names identify who requested each restart. Users don’t need to sign in.</p>${config.operators.map((u, index) => `<div class="list-row"><div class="ordered-name">${orderButtons("users", u, index, config.operators.length)}<strong>${esc(u.name)}</strong></div><div class="actions"><button class="secondary small" data-edit-user="${u.id}">Edit</button><button class="danger small" data-delete-user="${u.id}">Remove</button></div></div>`).join("") || '<p class="notice">Add the people who will use NetRevive.</p>'}<div id="user-editor"></div></section>`;
   userEditor();
+  bindOrdering("users", usersView);
   document
     .querySelectorAll("[data-edit-user]")
     .forEach(
@@ -228,7 +268,7 @@ function usersView() {
     (b) =>
       (b.onclick = () =>
         askDelete(
-          "Remove operator?",
+          "Remove user?",
           "Their previous restart history will remain available.",
           async () => {
             await api(`/api/admin/operators/${b.dataset.deleteUser}`, "DELETE");
@@ -240,23 +280,23 @@ function usersView() {
 }
 function userEditor(user = {}) {
   $("#user-editor").innerHTML =
-    `<h3>${user.id ? "Edit operator" : "Add an operator"}</h3><form id="user-form"><div class="fields"><div>${field("Name", "name", user.name || "", "text", 'required maxlength="80"')}</div><div>${field("Display order", "display_order", user.display_order || 0, "number", 'required min="-100000" max="100000"')}</div></div><div class="actions"><button class="primary" type="submit">${user.id ? "Save operator" : "Add operator"}</button>${user.id ? '<button class="secondary" type="button" id="cancel-user">Cancel</button>' : ""}</div></form>`;
+    `<h3>${user.id ? "Edit user" : "Add a user"}</h3><form id="user-form">${field("Name", "name", user.name || "", "text", 'required maxlength="80"')}<div class="actions"><button class="primary" type="submit">${user.id ? "Save user" : "Add user"}</button>${user.id ? '<button class="secondary" type="button" id="cancel-user">Cancel</button>' : ""}</div></form>`;
   $("#cancel-user")?.addEventListener("click", () => userEditor());
   bindForm("user-form", async (data) => {
     await api(
       "/api/admin/operators" + (user.id ? "/" + user.id : ""),
       user.id ? "PUT" : "POST",
-      { name: data.name, display_order: Number(data.display_order) },
+      { name: data.name },
     );
     await reloadConfig();
     usersView();
-    toast("Operator saved.");
+    toast("User saved.");
   });
 }
 function unifiView() {
   const s = config.settings;
   $("#admin-content").innerHTML =
-    `<section class="panel"><h2>Connect to UniFi</h2><p>Enter the local HTTPS address of the console or server running UniFi Network, such as https://controller.lan or https://controller.lan:8443. Keep the port if present, but remove any path after it. NetRevive connects directly to this address.</p><form id="unifi-form">${field("Controller URL", "controller_url", s.controller_url, "url", 'required placeholder="https://controller.lan"')}<label for="api_prefix">Controller type</label><select name="api_prefix" id="api_prefix"><option value="/proxy/network/integration/v1" ${s.api_prefix.includes("proxy") ? "selected" : ""}>UniFi OS console</option><option value="/integration/v1" ${!s.api_prefix.includes("proxy") ? "selected" : ""}>Self-hosted Network application</option></select>${s.api_key_from_environment ? '<p class="notice">The API key is managed through the container environment.</p>' : field(s.api_key_configured ? "Replace API key (leave blank to keep it)" : "API key", "api_key", "", "password", 'autocomplete="off" maxlength="4096"')}<p class="help">Open UniFi Network on your local controller and find Integrations for the API documentation and key setup supported by your version. The menu location varies by release. See the <a href="https://help.ui.com/hc/en-us/articles/30076656117655-Getting-Started-with-the-Official-UniFi-API" target="_blank" rel="noopener noreferrer">official UniFi API guide</a>. After saving, NetRevive never sends the stored key back to your browser.</p>${check("Verify the controller’s TLS certificate (recommended)", "verify_tls", s.verify_tls)}<p class="help">Self-signed certificates and certificates that do not match the Controller URL will fail verification. To keep verification enabled, use a matching address and a certificate trusted by NetRevive. Disabling verification keeps HTTPS encryption but allows controller impersonation.</p><div class="actions"><button class="primary" type="submit">Save connection</button><button class="secondary" type="button" id="test-unifi">Test UniFi connection</button></div><div id="connection-result" role="status"></div></form></section><section class="panel"><h2>Site & PoE equipment</h2><p>Select a site, then discover its switches and restartable ports.</p><form id="site-form"><label for="site">UniFi site</label><select id="site" name="site_id" required><option value="">Choose a site</option>${sites.map((site) => `<option value="${esc(site.id)}" ${site.id === s.site_id ? "selected" : ""}>${esc(site.name)}</option>`).join("")}${s.site_id && !sites.some((x) => x.id === s.site_id) ? `<option selected value="${esc(s.site_id)}">Configured site — test connection to refresh names</option>` : ""}</select><div class="actions"><button class="primary" type="submit">Save site & discover ports</button></div></form><div id="target-inventory"></div></section>`;
+    `<section class="panel"><h2>Connect to UniFi</h2><p>Enter the local HTTPS address of the console or server running UniFi Network, such as https://controller.lan or https://controller.lan:8443. Keep the port if present, but remove any path after it. NetRevive connects directly to this address.</p><form id="unifi-form">${field("Controller URL", "controller_url", s.controller_url, "url", 'required placeholder="https://controller.lan"')}<label for="api_prefix">Controller type</label><select name="api_prefix" id="api_prefix"><option value="/proxy/network/integration/v1" ${s.api_prefix.includes("proxy") ? "selected" : ""}>UniFi OS console</option><option value="/integration/v1" ${!s.api_prefix.includes("proxy") ? "selected" : ""}>UniFi Network Server (standalone)</option></select><p class="help">Both options are UniFi. Choose UniFi OS console for a Dream Machine or CloudKey, or standalone for UniFi Network installed directly on your own server.</p>${s.api_key_from_environment ? '<p class="notice">The API key is managed through the container environment.</p>' : field(s.api_key_configured ? "Replace API key (leave blank to keep it)" : "API key", "api_key", "", "password", 'autocomplete="off" maxlength="4096"')}<p class="help">Open UniFi Network on your local controller and find Integrations for the API documentation and key setup supported by your version. The menu location varies by release. See the <a href="https://help.ui.com/hc/en-us/articles/30076656117655-Getting-Started-with-the-Official-UniFi-API" target="_blank" rel="noopener noreferrer">official UniFi API guide</a>. After saving, NetRevive never sends the stored key back to your browser.</p>${check("Verify the controller’s TLS certificate (recommended)", "verify_tls", s.verify_tls)}<p class="help">Self-signed certificates and certificates that do not match the Controller URL will fail verification. To keep verification enabled, use a matching address and a certificate trusted by NetRevive. Disabling verification keeps HTTPS encryption but allows controller impersonation.</p><div class="actions"><button class="primary" type="submit">Save connection</button><button class="secondary" type="button" id="test-unifi">Test UniFi connection</button></div><div id="connection-result" role="status"></div></form></section><section class="panel"><h2>Site & PoE equipment</h2><p>Select a site, then discover its switches and restartable ports.</p><form id="site-form"><label for="site">UniFi site</label><select id="site" name="site_id" required><option value="">Choose a site</option>${sites.map((site) => `<option value="${esc(site.id)}" ${site.id === s.site_id ? "selected" : ""}>${esc(site.name)}</option>`).join("")}${s.site_id && !sites.some((x) => x.id === s.site_id) ? `<option selected value="${esc(s.site_id)}">Configured site — test connection to refresh names</option>` : ""}</select><div class="actions"><button class="primary" type="submit">Save site & discover ports</button></div></form><div id="target-inventory"></div></section>`;
   const form = $("#unifi-form");
   const connectionData = () => {
     const data = Object.fromEntries(new FormData(form));
@@ -372,7 +412,7 @@ function renderInventory() {
 }
 function groupsView() {
   $("#admin-content").innerHTML =
-    `<section class="panel"><div class="section-head"><div><h2>Restart Groups</h2><p>One clear action for each set of equipment.</p></div><button class="primary small" id="add-group">+ Add group</button></div>${config.groups.map((g) => `<div class="list-row"><div><strong>${esc(g.name)}</strong><p>${esc(g.button_label)} · ${g.target_ids.length} ${g.target_ids.length === 1 ? "target" : "targets"} · ${g.enabled ? "Enabled" : "Disabled"}</p><p>Order ${g.display_order} · ${g.lockout_seconds === null ? "Default" : g.lockout_seconds + "s"} lockout · ${g.recovery_mode === "network" ? "Network health" : "No recovery monitoring"}</p></div><div class="actions"><button class="secondary small" data-edit-group="${g.id}">Edit</button><button class="danger small" data-delete-group="${g.id}">Delete</button></div></div>`).join("") || '<div class="empty"><h3>Create your first restart group</h3><p>Choose a name people recognise and assign the equipment it will restart.</p></div>'}</section><div id="group-editor"></div>`;
+    `<section class="panel"><div class="section-head"><div><h2>Restart Groups</h2><p>One clear action for each set of equipment.</p></div><button class="primary small" id="add-group">+ Add group</button></div>${config.groups.map((g, index) => `<div class="list-row"><div><div class="ordered-name">${orderButtons("groups", g, index, config.groups.length)}<strong>${esc(g.name)}</strong></div><p>${esc(g.button_label)} · ${g.target_ids.length} ${g.target_ids.length === 1 ? "target" : "targets"} · ${g.enabled ? "Enabled" : "Disabled"}</p><p>${g.lockout_seconds === null ? "Default" : g.lockout_seconds + "s"} lockout · ${g.recovery_mode === "network" ? "Network health" : "No recovery monitoring"}</p></div><div class="actions"><button class="secondary small" data-edit-group="${g.id}">Edit</button><button class="danger small" data-delete-group="${g.id}">Delete</button></div></div>`).join("") || '<div class="empty"><h3>Create your first restart group</h3><p>Choose a name people recognise and assign the equipment it will restart.</p></div>'}</section><div id="group-editor"></div>`;
   $("#add-group").onclick = () => groupEditor();
   document
     .querySelectorAll("[data-edit-group]")
@@ -396,6 +436,7 @@ function groupsView() {
           },
         )),
   );
+  bindOrdering("groups", groupsView);
   if (!config.groups.length) groupEditor();
 }
 function groupEditor(
@@ -404,14 +445,13 @@ function groupEditor(
     button_label: "",
     description: "",
     enabled: true,
-    display_order: 0,
     lockout_seconds: null,
     recovery_mode: "network",
     target_ids: [],
   },
 ) {
   $("#group-editor").innerHTML =
-    `<section class="panel"><h2>${group.id ? "Edit restart group" : "New restart group"}</h2><form id="group-form"><div class="fields"><div>${field("Group name", "name", group.name, "text", 'required maxlength="80" placeholder="Router"')}</div><div>${field("Button label", "button_label", group.button_label, "text", 'required maxlength="80" placeholder="Restart Router"')}</div></div><label for="description">Description (optional)</label><textarea id="description" name="description" maxlength="500">${esc(group.description)}</textarea><div class="fields"><div>${field("Display order", "display_order", group.display_order, "number", 'required min="-100000" max="100000"')}</div><div>${field("Lockout in seconds (blank uses default)", "lockout_seconds", group.lockout_seconds ?? "", "number", 'min="10" max="86400"')}</div></div><label for="recovery_mode">Recovery monitoring</label><select id="recovery_mode" name="recovery_mode"><option value="network" ${group.recovery_mode === "network" ? "selected" : ""}>Network health — routers, modems & gateways</option><option value="none" ${group.recovery_mode === "none" ? "selected" : ""}>None — access points & other equipment</option></select><p class="help">Network health checks DNS and internet access from this server. It cannot confirm that an access point or another individual device is ready.</p>${check("Show this group on the dashboard", "enabled", group.enabled)}<label>Assigned PoE targets</label><div class="target-list">${config.targets.map((t) => `<label class="check"><input type="checkbox" name="target_ids" value="${t.id}" ${group.target_ids.includes(t.id) ? "checked" : ""}><span><strong>${esc(t.label || t.port_name || "Port " + t.port_number)}</strong><small>${esc(t.switch_name)} / Port ${t.port_number} ${!t.enabled ? "· Disabled" : !t.available ? "· Unavailable" : ""}</small></span></label>`).join("") || "<p>Discover your UniFi ports before creating a group.</p>"}</div><div class="notice warning">All selected PoE ports will be power-cycled when this Restart Group is triggered. Ensure every target is correct.</div><div class="actions"><button class="primary" type="submit">Save restart group</button><button class="secondary" type="button" id="cancel-group">Cancel</button></div></form></section>`;
+    `<section class="panel"><h2>${group.id ? "Edit restart group" : "New restart group"}</h2><form id="group-form"><div class="fields"><div>${field("Group name", "name", group.name, "text", 'required maxlength="80" placeholder="Router"')}</div><div>${field("Button label", "button_label", group.button_label, "text", 'required maxlength="80" placeholder="Restart Router"')}</div></div><label for="description">Description (optional)</label><textarea id="description" name="description" maxlength="500">${esc(group.description)}</textarea>${field("Lockout in seconds (blank uses default)", "lockout_seconds", group.lockout_seconds ?? "", "number", 'min="10" max="86400"')}<label for="recovery_mode">Recovery monitoring</label><select id="recovery_mode" name="recovery_mode"><option value="network" ${group.recovery_mode === "network" ? "selected" : ""}>Network health — routers, modems & gateways</option><option value="none" ${group.recovery_mode === "none" ? "selected" : ""}>None — access points & other equipment</option></select><p class="help">Network health checks DNS and internet access from this server. It cannot confirm that an access point or another individual device is ready.</p>${check("Show this group on the dashboard", "enabled", group.enabled)}<label>Assigned PoE targets</label><div class="target-list">${config.targets.map((t) => `<label class="check"><input type="checkbox" name="target_ids" value="${t.id}" ${group.target_ids.includes(t.id) ? "checked" : ""}><span><strong>${esc(t.label || t.port_name || "Port " + t.port_number)}</strong><small>${esc(t.switch_name)} / Port ${t.port_number} ${!t.enabled ? "· Disabled" : !t.available ? "· Unavailable" : ""}</small></span></label>`).join("") || "<p>Discover your UniFi ports before creating a group.</p>"}</div><div class="notice warning">All selected PoE ports will be power-cycled when this Restart Group is triggered. Ensure every target is correct.</div><div class="actions"><button class="primary" type="submit">Save restart group</button><button class="secondary" type="button" id="cancel-group">Cancel</button></div></form></section>`;
   $("#cancel-group").onclick = () => $("#group-editor").replaceChildren();
   bindForm("group-form", async (data, form) => {
     const payload = {
@@ -419,7 +459,6 @@ function groupEditor(
       button_label: data.button_label,
       description: data.description,
       enabled: !!data.enabled,
-      display_order: Number(data.display_order),
       lockout_seconds:
         data.lockout_seconds === "" ? null : Number(data.lockout_seconds),
       recovery_mode: data.recovery_mode,

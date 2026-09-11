@@ -16,7 +16,6 @@ class Bootstrap:
 
 DEFAULTS = {
     "title": "NetRevive",
-    "hostname": "net-revive.lan",
     "timezone": "Europe/London",
     "controller_url": "",
     "api_prefix": "/proxy/network/integration/v1",
