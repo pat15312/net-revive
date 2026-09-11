@@ -1,13 +1,11 @@
 # Verification
 
-Verified locally on 11 September 2026:
+Status as of 12 September 2026:
 
-- Full automated suite: **73 passed**, including inside the Docker `test` stage on Linux AMD64 / Python 3.14.
-- Ruff checks, frontend JavaScript syntax checks and installed Python dependency consistency passed.
-- Production image `net-revive:local` built successfully.
-- Production container startup verified with a read-only root filesystem, all capabilities dropped, UID 10001, persistent SQLite/key files and a healthy Docker healthcheck.
-- Production Compose configuration validated from `.env.example`.
-- Real-browser regression passed using the actual FastAPI endpoints and a mocked UniFi adapter: complete first-run setup, site/port discovery, group/operator creation, Admin routes, short-hold cancellation, keyboard restart, persisted cooldown, remembered operator, detailed history and mobile layout. No remote asset requests or JavaScript errors occurred.
-- Official Ubiquiti port-action and device-port schemas were verified; see [API notes](unifi-api.md).
+- **86 automated tests passed** locally. Tests use mocked UniFi, DNS and internet interactions.
+- The browser regression passed against the real FastAPI endpoints and a mock UniFi adapter. It covers setup, administration, port discovery/editing, hold-to-restart behaviour, cooldowns, operator selection, restart history, themes and desktop/mobile layouts.
+- Ruff and JavaScript syntax checks passed. GitHub Actions also passed the Python suite and Docker test stage, then published Linux AMD64 and ARM64 images.
+- The production container was exercised locally on AMD64 with a read-only filesystem, dropped capabilities, UID 10001 and persistent database/key storage.
+- The maintainer deployed NetRevive on a Raspberry Pi through Portainer and reported a successful functional test with their UniFi installation. This is a user-reported hardware test, not a compatibility claim for every controller, switch or firmware version.
 
-Scope limits: no live UniFi controller or physical switch was supplied, so real hardware was not contacted or power-cycled. The image was built and exercised locally on AMD64; the GitHub workflow is configured to build/publish both AMD64 and ARM64. No repository remote or registry owner was supplied, so the GHCR workflow has not been run against a remote repository and no image was published. Two upstream Starlette/AnyIO test-transport deprecation warnings are present; they do not fail tests.
+See the [latest workflow runs](https://github.com/pat15312/net-revive/actions) for build results and the [UniFi API notes](unifi-api.md) for endpoint compatibility. Browser automation uses Chromium; iOS Safari behaviour has also informed fixes through user feedback, but is not covered by the automated suite.
