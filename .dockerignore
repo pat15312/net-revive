@@ -1,0 +1,15 @@
+.git
+.github
+.env
+.env.*
+.venv
+data
+**/__pycache__
+**/*.db*
+**/*.sqlite*
+**/secret.key
+.pytest_cache
+.ruff_cache
+node_modules
+test-results
+.sites-runtime

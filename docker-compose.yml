@@ -1,0 +1,31 @@
+services:
+  net-revive:
+    image: ghcr.io/${GHCR_OWNER:?Set GHCR_OWNER in .env}/net-revive:${NETREVIVE_TAG:-latest}
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 40s
+    ports:
+      - "${NETREVIVE_BIND:-0.0.0.0}:${NETREVIVE_PORT:-8080}:8080"
+    environment:
+      DATABASE_PATH: ${DATABASE_PATH:-/data/netrevive.db}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      UNIFI_API_KEY: ${UNIFI_API_KEY:-}
+      SECRET_KEY: ${SECRET_KEY:-}
+      TZ: ${TZ:-Europe/London}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    volumes:
+      - netrevive-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  netrevive-data:

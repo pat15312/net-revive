@@ -1,0 +1,7 @@
+# Optional local build; use together with docker-compose.yml.
+services:
+  net-revive:
+    image: net-revive:local
+    build:
+      context: .
+      target: production

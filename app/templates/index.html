@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="NetRevive local network recovery" />
+    <meta name="csrf-token" content="{{ csrf }}" />
+    <title>
+      NetRevive{% if title != 'NetRevive' %} · {{ title }}{% endif %}
+    </title>
+    <link rel="canonical" href="{{ canonical }}/" />
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/static/app.css" />
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="NetRevive dashboard"
+        ><span class="brand-icon">↻</span>Net<span>Revive</span></a
+      >
+      <nav aria-label="Main">
+        <a href="/">Dashboard</a
+        ><a href="/admin">Admin <span aria-hidden="true">↗</span></a>
+      </nav>
+    </header>
+    <main id="app">
+      <div class="page-heading">
+        <div>
+          <p class="eyebrow">LOCAL NETWORK RECOVERY</p>
+          <h1>Welcome to NetRevive</h1>
+          <p>A little preparation. A simpler way to get connected again.</p>
+        </div>
+        <span class="pill">Local & private</span>
+      </div>
+      <section class="panel narrow">
+        <span class="step-label">GETTING READY</span>
+        <h2>Set up your recovery controls</h2>
+        <p>
+          Choose your network equipment, add the people who can restart it, and
+          create your first restart group.
+        </p>
+        <p id="loading" role="status">Loading your local configuration…</p>
+      </section>
+    </main>
+    <div id="toast" class="toast" role="status" hidden></div>
+    <footer>
+      <span class="footer-brand">NetRevive</span
+      ><span>Your network. Your control.</span
+      ><span id="hostname">{{ hostname }}</span>
+    </footer>
+    <noscript
+      ><p class="notice">
+        Enable JavaScript to configure NetRevive and use its restart controls.
+        All scripts are served locally.
+      </p></noscript
+    >
+  </body>
+</html>
