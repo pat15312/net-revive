@@ -15,12 +15,12 @@ try{
  const visitWithDelayedSession=async url=>{
    let release;
    const gate=new Promise(resolve=>{release=resolve;});
-   await page.route('**/api/session',async route=>{await gate;await route.continue();});
+   await page.route('**/api/session',async route=>{const response=await route.fetch();await gate;await route.fulfill({response});});
    await page.goto(url,{waitUntil:'domcontentloaded'});
    assert.equal((await page.locator('#app').textContent()).trim(),'Loading NetRevive…');
    assert.equal(await page.locator('footer').count(),0);
    const response=page.waitForResponse(r=>r.url().endsWith('/api/session'));
-   release();await response;
+   release();await (await response).finished();
    await page.unroute('**/api/session');
  };
  await page.emulateMedia({colorScheme:'light'});
@@ -36,6 +36,10 @@ try{
  await page.getByRole('button',{name:'Create password & continue'}).click();
  await page.getByLabel('Application display title').waitFor();
  assert.equal(await page.getByLabel('Friendly hostname or URL').count(),0);
+ assert.ok(await page.locator('#timezone option').count()>100);
+ await page.getByLabel('Display timezone',{exact:true}).selectOption('America/New_York');
+ const saveGap=await page.evaluate(()=>document.querySelector('#general button').getBoundingClientRect().top-document.querySelector('#timezone').getBoundingClientRect().bottom);
+ assert.ok(saveGap>=20,'General save button needs spacing');
  await page.getByRole('button',{name:'Save general settings'}).click();
  await page.getByRole('button',{name:'Continue →'}).click();
  await page.getByLabel('Controller URL').fill('https://controller.test');
@@ -199,6 +203,19 @@ try{
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),hash+' mobile overflow');
   assert.equal(await page.locator('#app .eyebrow').count(),0);
   assert.ok(!/\boperators?\b/i.test(await page.locator('#admin-content').innerText()),hash+' uses old user terminology');
+  if(hash==='general'){
+    assert.equal(await page.getByLabel('Display timezone',{exact:true}).inputValue(),'America/New_York');
+    await page.getByLabel('Display timezone',{exact:true}).selectOption('Asia/Kathmandu');
+    const saved=page.waitForResponse(r=>r.url().endsWith('/api/admin/general') && r.request().method()==='PUT');
+    await page.getByRole('button',{name:'Save general settings',exact:true}).click();
+    assert.equal((await saved).status(),200);
+    await page.getByText('General settings saved.',{exact:true}).waitFor();
+    await page.reload();
+    await page.getByLabel('Display timezone',{exact:true}).waitFor();
+    assert.equal(await page.getByLabel('Display timezone',{exact:true}).inputValue(),'Asia/Kathmandu');
+    assert.equal((await (await page.request.get('http://127.0.0.1:8019/api/status')).json()).timezone,'Asia/Kathmandu');
+    await page.screenshot({path:'test-results/admin-general-timezone-mobile.png',fullPage:true});
+  }
   if(hash==='users' || hash==='groups'){
     await page.screenshot({path:'test-results/admin-'+hash+'-ordering-mobile.png',fullPage:true});
   }

@@ -188,8 +188,12 @@ async function reloadConfig() {
 }
 function generalView() {
   const s = config.settings;
+  const timezones = config.timezones.filter(zone => {
+    try { new Intl.DateTimeFormat(undefined, {timeZone: zone}); return true; }
+    catch { return false; }
+  });
   $("#admin-content").innerHTML =
-    `<section class="panel"><h2>General settings</h2><p>Choose your dashboard title and the timezone used for activity times.</p><form id="general">${field("Application display title", "title", s.title, "text", 'required maxlength="80"')}${field("Display timezone", "timezone", s.timezone, "text", 'required list="timezones"')}<datalist id="timezones"><option value="Europe/London"><option value="Etc/UTC"><option value="America/New_York"><option value="America/Los_Angeles"><option value="Europe/Paris"><option value="Asia/Tokyo"><option value="Australia/Sydney"></datalist><button class="primary" type="submit">Save general settings</button></form></section>`;
+    `<section class="panel"><h2>General settings</h2><p>Choose your dashboard title and the timezone used for activity times.</p><form id="general">${field("Application display title", "title", s.title, "text", 'required maxlength="80"')}<label for="timezone">Display timezone</label><select id="timezone" name="timezone" required>${[...new Set([s.timezone, ...timezones])].sort().map(zone => `<option value="${esc(zone)}" ${zone === s.timezone ? "selected" : ""}>${esc(zone.replaceAll("_", " "))}</option>`).join("")}</select><div class="actions"><button class="primary" type="submit">Save general settings</button></div></form></section>`;
   bindForm("general", async (data) => {
     await api("/api/admin/general", "PUT", data);
     await reloadConfig();

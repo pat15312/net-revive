@@ -71,11 +71,16 @@ def test_login_rate_limit(admin):
 
 
 def test_settings_persist_and_timezone(admin, app):
+    choices = admin.get("/api/admin/config").json()["timezones"]
+    assert choices == sorted(set(choices))
+    assert {"Europe/London", "America/New_York", "Asia/Kathmandu", "UTC"} <= set(choices)
+    assert "localtime" not in choices
     data = {"title": "Recovery console", "timezone": "America/New_York"}
     assert admin.request("PUT", "/api/admin/general", data).status_code == 200
     reopened = Database(app.state.db.path)
     assert all(reopened.settings()[key] == value for key, value in data.items())
     assert admin.get("/api/status").json()["title"] == "Recovery console"
+    assert admin.get("/api/status").json()["timezone"] == "America/New_York"
     data["timezone"] = "invalid/zone"
     assert admin.request("PUT", "/api/admin/general", data).status_code == 422
 

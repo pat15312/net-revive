@@ -1,5 +1,6 @@
 import sqlite3
 from typing import Literal
+from zoneinfo import available_timezones
 
 from cryptography.fernet import InvalidToken
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -12,6 +13,7 @@ from .security import require_admin
 from .unifi import UniFiError
 
 router = APIRouter(prefix="/api/admin", dependencies=[Depends(require_admin)])
+TIMEZONES = sorted(available_timezones() - {"localtime"})
 
 
 def no_dispatch(conn):
@@ -37,6 +39,7 @@ def config(request: Request):
         ]
         return {
             "settings": settings,
+            "timezones": TIMEZONES,
             "operators": [dict(r) for r in conn.execute("SELECT * FROM operators ORDER BY display_order,id")],
             "groups": groups,
             "targets": [
