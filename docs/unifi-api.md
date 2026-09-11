@@ -11,6 +11,12 @@ Official references:
 - [List Adopted Devices](https://developer.ui.com/network/v10.1.84/listadopteddevices)
 - [List Local Sites](https://developer.ui.com/network/v10.1.84/listlocalsites)
 
+## Connection setup
+
+Controller URL is the local HTTPS origin of the console or server running UniFi Network, including its port if applicable (for example, `https://controller.lan:8443`). Omit browser paths such as `/network/...`. The cloud Site Manager URL is not the local controller address.
+
+Ubiquiti's current getting-started guide points to **UniFi Network → Integrations** for version-specific local API documentation. Menu placement varies by release; **Settings → Control Plane → Integrations** is not a universal path. Follow your installed application's local API key setup instructions. NetRevive saves the submitted key encrypted and does not return the stored key in browser responses.
+
 ## Local endpoints
 
 The API specification uses `/integration` as its server base, with `/v1` paths. UniFi OS consoles additionally route Network requests through `/proxy/network`. These two prefixes are explicit Admin choices; no path is accepted from an ordinary restart client.
@@ -28,6 +34,6 @@ The documented PoE fields include `standard`, `type`, `enabled` and `state`. Por
 
 ## Compatibility and uncertainty
 
-Some UniFi releases or deployment types may not expose these endpoints or allow the desired action with a given key. Connection testing and discovery must succeed before setup completion. An HTTP error is reported to Admin without falling back to undocumented `/api/s/...` commands. Browser code never handles the key or controller requests.
+Some UniFi releases or deployment types may not expose these endpoints or allow the desired action with a given key. Connection testing and discovery must succeed before setup completion. An HTTP error is reported to Admin without falling back to undocumented `/api/s/...` commands. The browser submits the key when an administrator saves it; subsequent controller requests and use of the stored key happen only on the NetRevive server.
 
 A 2xx response means the API accepted the request. There are no automatic retries for power-cycle POSTs, including timeouts, redirects or server errors. A lost response may follow a successfully delivered command. Unknown acceptance is preserved in detailed history and cooldowns remain active. TLS verification defaults on; redirects and environment HTTP proxies are disabled so credentials stay on the configured local controller path.
