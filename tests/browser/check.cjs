@@ -7,7 +7,14 @@ const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
 try{
  const page=await browser.newPage({viewport:{width:1360,height:1000}});const errors=[],remote=[];
  page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(!r.url().startsWith('http://127.0.0.1:8019'))remote.push(r.url());});
+ await page.emulateMedia({colorScheme:'light'});
  await page.goto('http://127.0.0.1:8019/');
+ assert.equal(await page.locator('html').getAttribute('data-theme'),'light');
+ await page.emulateMedia({colorScheme:'dark'});
+ await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');
+ assert.equal(await page.getByRole('button',{name:'Dark mode',exact:true}).getAttribute('aria-pressed'),'true');
+ await page.getByRole('button',{name:'Dark mode',exact:true}).click();
+ assert.equal(await page.locator('html').getAttribute('data-theme'),'light');
  await page.getByLabel('Administrator password',{exact:true}).fill('browser-testing-password');
  await page.getByLabel('Confirm password').fill('browser-testing-password');
  await page.getByRole('button',{name:'Create password & continue'}).click();
@@ -78,6 +85,9 @@ try{
  await page.getByRole('button',{name:'Save monitoring settings'}).click();
  await page.getByRole('button',{name:'Finish setup'}).click();
  await page.getByRole('heading',{name:'Network overview'}).waitFor();
+ assert.equal(await page.locator('#app .eyebrow, #app .group-icon').count(),0);
+ assert.equal(await page.getByText('Connected locally',{exact:true}).count(),0);
+ assert.equal(await page.locator('.dashboard-title').evaluate(el=>getComputedStyle(el).fontSize),await page.locator('.restart-heading h2').evaluate(el=>getComputedStyle(el).fontSize));
  await page.getByRole('dialog',{name:'Who’s using NetRevive?'}).waitFor();
  await page.keyboard.press('Escape');
  assert.equal(await page.locator('#operator-dialog').evaluate(el=>el.open),true);
@@ -89,9 +99,15 @@ try{
  await button.click();await page.waitForTimeout(200);assert.equal(await page.locator('.activity').count(),0);
  await button.focus();await page.keyboard.down('Space');await page.waitForTimeout(700);await page.keyboard.up('Space');assert.equal(await page.locator('.activity').count(),0);
  await page.screenshot({path:'test-results/dashboard-desktop.png',fullPage:true});
+ await page.getByRole('button',{name:'Dark mode',exact:true}).click();
+ assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
+ await page.screenshot({path:'test-results/dashboard-desktop-dark.png',fullPage:true});
+ await page.emulateMedia({colorScheme:'light'});
+ assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
  await button.focus();await page.keyboard.down('Space');await page.waitForTimeout(2250);await page.keyboard.up('Space');
  await page.locator('.activity').first().waitFor();assert.equal(await button.isDisabled(),true);
  await page.reload();await page.getByRole('button',{name:'Change user',exact:true}).waitFor();
+ assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
  assert.equal(await page.locator('#current-operator').textContent(),'Operator A');
  assert.equal(await page.locator('#operator-dialog').evaluate(el=>el.open),false);
  await page.getByRole('button',{name:'Change user',exact:true}).click();
@@ -110,7 +126,9 @@ try{
  await page.getByRole('button',{name:'Open dashboard',exact:true}).click();
  await page.setViewportSize({width:390,height:844});await page.screenshot({path:'test-results/dashboard-mobile.png',fullPage:true});
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
+ await page.screenshot({path:'test-results/dashboard-mobile-dark.png',fullPage:true});
  await page.goto('http://127.0.0.1:8019/admin#history');
+ assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
  await page.getByText('Restart history',{exact:true}).waitFor();await page.locator('summary').first().click();
  await page.getByText('switch-a / 1',{exact:false}).first().waitFor();
  for(const hash of ['general','users','unifi','groups','monitoring']){

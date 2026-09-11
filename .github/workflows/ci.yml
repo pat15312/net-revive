@@ -29,7 +29,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: node --check app/static/app.js
+      - run: node --check app/static/app.js && node --check app/static/theme.js
       - run: docker build --target test -t net-revive:test .
 
   publish:

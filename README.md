@@ -8,6 +8,8 @@ A **Restart Group** is a named action such as “Restart Router” or “Restart
 
 On your first dashboard visit, choose your name in the welcome dialog. NetRevive remembers it on this browser; use **Change user** to switch names. Then hold a restart button for two seconds. Mouse, touch, Space and Enter are supported. Releasing early, leaving the button, losing focus or hiding the page cancels the hold. Operators are attribution labels, not authenticated identities.
 
+Use the **Dark mode** control in the top navigation to switch themes. NetRevive follows the device theme until you choose a preference, then remembers that choice on the browser across dashboard and Admin pages.
+
 Each request is recorded with its group settings, operator, health state and target snapshots. A multi-port restart continues if an individual target fails. History distinguishes confirmed acceptance, rejection, unknown acceptance and requests that were never attempted. UniFi accepting a power-cycle request does **not** prove that the equipment has finished booting.
 
 ## Architecture

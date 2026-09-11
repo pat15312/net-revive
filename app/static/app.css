@@ -9,6 +9,15 @@
   --bg: #f4f7f8;
   --red: #a43036;
   --amber: #865506;
+  --action: #136c5e;
+  --action-hover: #10594e;
+  --success-line: #cbe4d8;
+  --warning-bg: #fff5e4;
+  --warning-line: #efdab4;
+  --danger-bg: #fff1f1;
+  --danger-line: #edcacc;
+  --notice-bg: #f0f5f7;
+  --input-line: #cbd6d8;
   font-family:
     system-ui,
     -apple-system,
@@ -19,6 +28,25 @@
   background: var(--bg);
   font-size: 16px;
   line-height: 1.5;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #e6eef0;
+  --muted: #a2b5bc;
+  --green: #75d5b7;
+  --green-soft: #1b352e;
+  --line: #34464e;
+  --paper: #18252b;
+  --bg: #101a1f;
+  --red: #ff9aa0;
+  --amber: #ebc277;
+  --success-line: #33584a;
+  --warning-bg: #332a1a;
+  --warning-line: #67552e;
+  --danger-bg: #361f28;
+  --danger-line: #70343d;
+  --notice-bg: #202f36;
+  --input-line: #486069;
 }
 * {
   box-sizing: border-box;
@@ -64,7 +92,7 @@ textarea:focus-visible {
 .topbar {
   height: 84px;
   border-bottom: 1px solid var(--line);
-  background: #fff;
+  background: var(--paper);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -87,7 +115,7 @@ textarea:focus-visible {
 .brand-icon {
   display: grid;
   place-content: center;
-  background: var(--green);
+  background: var(--action);
   color: white;
   width: 36px;
   height: 36px;
@@ -98,6 +126,7 @@ textarea:focus-visible {
 }
 .topbar nav {
   display: flex;
+  align-items: center;
   gap: 28px;
   font-size: 14px;
   font-weight: 600;
@@ -151,7 +180,7 @@ p {
   padding: 5px 11px;
   font-size: 13px;
   white-space: nowrap;
-  background: white;
+  background: var(--paper);
 }
 .pill {
   display: flex;
@@ -180,7 +209,7 @@ p {
 }
 .status-banner {
   background: var(--green-soft);
-  border: 1px solid #cbe4d8;
+  border: 1px solid var(--success-line);
   border-radius: 12px;
   padding: 20px;
   display: flex;
@@ -189,12 +218,12 @@ p {
   margin-bottom: 22px;
 }
 .status-banner.warning {
-  background: #fff5e4;
-  border-color: #efdab4;
+  background: var(--warning-bg);
+  border-color: var(--warning-line);
 }
 .status-symbol {
   font-size: 26px;
-  border: 1px solid #bedbcc;
+  border: 1px solid var(--success-line);
   border-radius: 50%;
   width: 46px;
   height: 46px;
@@ -274,6 +303,7 @@ p {
   flex-wrap: wrap;
 }
 #operator-dialog {
+  background: var(--paper);
   width: min(440px, 90vw);
 }
 .group-grid {
@@ -291,20 +321,9 @@ p {
   margin: 0;
   padding: 26px;
 }
-.group-icon {
-  color: var(--green);
-  background: #eef5f3;
-  width: 42px;
-  height: 42px;
-  display: grid;
-  place-content: center;
-  border-radius: 10px;
-  font-size: 26px;
-  margin-bottom: 22px;
-}
 .group-card .description {
   flex: 1;
-  min-height: 48px;
+  margin: 4px 0 20px;
   font-size: 15px;
 }
 .hold {
@@ -348,20 +367,20 @@ p {
   min-height: 46px;
 }
 .primary {
-  background: var(--green);
+  background: var(--action);
   color: white;
 }
 .primary:hover:not(:disabled) {
-  background: #10594e;
+  background: var(--action-hover);
 }
 .secondary {
-  background: #fff;
+  background: var(--paper);
   border-color: var(--line);
   color: var(--ink);
 }
 .danger {
-  background: #fff1f1;
-  border-color: #edcacc;
+  background: var(--danger-bg);
+  border-color: var(--danger-line);
   color: var(--red);
 }
 .small {
@@ -407,17 +426,17 @@ p {
 .badge.recovered {
   background: var(--green-soft);
   color: var(--green);
-  border-color: #cbe4d8;
+  border-color: var(--success-line);
 }
 .badge.unsuccessful,
 .badge.interrupted {
   color: var(--red);
-  background: #fff1f1;
+  background: var(--danger-bg);
 }
 .badge.partial,
 .badge.timed_out {
   color: var(--amber);
-  background: #fff5e4;
+  background: var(--warning-bg);
 }
 footer {
   max-width: 1100px;
@@ -446,8 +465,8 @@ input:not([type="checkbox"]),
 select,
 textarea {
   width: 100%;
-  background: white;
-  border: 1px solid #cbd6d8;
+  background: var(--paper);
+  border: 1px solid var(--input-line);
   border-radius: 7px;
   padding: 10px 12px;
   color: var(--ink);
@@ -482,7 +501,7 @@ input[type="checkbox"] {
   gap: 0 20px;
 }
 .notice {
-  background: #f0f5f7;
+  background: var(--notice-bg);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 14px 16px;
@@ -491,13 +510,13 @@ input[type="checkbox"] {
   margin: 16px 0;
 }
 .notice.warning {
-  background: #fff5e4;
-  border-color: #efdab4;
-  color: #725016;
+  background: var(--warning-bg);
+  border-color: var(--warning-line);
+  color: var(--amber);
 }
 .error {
   color: var(--red);
-  background: #fff1f1;
+  background: var(--danger-bg);
   border-radius: 8px;
   padding: 12px 16px;
   font-size: 14px;
@@ -518,7 +537,7 @@ input[type="checkbox"] {
   font-weight: 600;
 }
 .tabs a.active {
-  background: var(--green);
+  background: var(--action);
   color: white;
 }
 .list-row {
@@ -559,7 +578,7 @@ input[type="checkbox"] {
   left: 50%;
   transform: translateX(-50%);
   background: var(--ink);
-  color: white;
+  color: var(--paper);
   padding: 14px 22px;
   border-radius: 10px;
   max-width: min(90vw, 600px);
@@ -626,7 +645,7 @@ summary {
   padding: 8px 4px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: white;
+  background: var(--paper);
   color: var(--ink);
   cursor: pointer;
 }
@@ -653,7 +672,7 @@ summary {
   content: "●";
 }
 .port-unavailable .port-socket {
-  color: #9a5700;
+  color: var(--amber);
 }
 .port-unavailable .port-socket::after {
   content: "◇";
@@ -693,6 +712,7 @@ pre {
   border-radius: 8px;
 }
 dialog {
+  background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 28px;
@@ -806,4 +826,49 @@ th {
   .status-cell:first-child { padding-top: 0; }
   .status-cell:last-child { padding-bottom: 0; }
   .status-cell .caption { margin: 0; }
+}
+
+.dashboard-title {
+  font-size: 21px;
+  letter-spacing: -0.4px;
+  line-height: 1.5;
+  margin: 0 0 16px;
+}
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+.theme-toggle:hover {
+  background: var(--green-soft);
+}
+.theme-sun,
+:root[data-theme="dark"] .theme-moon {
+  display: none;
+}
+:root[data-theme="dark"] .theme-sun {
+  display: block;
+}
+@media (max-width: 700px) {
+  .theme-toggle > span {
+    display: none;
+  }
+  .topbar nav {
+    gap: 12px;
+  }
+}
+@media (max-width: 420px) {
+  .brand { font-size: 20px; }
+  .brand-icon { width: 32px; height: 32px; margin-right: 8px; }
+  .topbar nav { gap: 8px; font-size: 12px; }
 }

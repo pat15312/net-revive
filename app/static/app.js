@@ -571,11 +571,7 @@ async function refreshDashboard(initial = false) {
     lastStatusAt = Date.now();
     if (initial || !$("#network-health")) {
       root.innerHTML =
-        heading(
-          data.title === "NetRevive" ? "Network overview" : data.title,
-          "Check your connection. Restart equipment when you need to.",
-          "Connected locally",
-        ) +
+        `<h1 class="dashboard-title">${esc(data.title === "NetRevive" ? "Network overview" : data.title)}</h1>` +
         `<section class="panel"><div id="network-health" aria-live="polite"></div><div class="status-grid" id="status-grid"></div></section><div class="section-head restart-heading"><h2>Restart equipment</h2><div class="dashboard-user"><span id="current-operator"></span><button type="button" class="secondary small" id="change-operator">Change user</button></div></div><dialog id="operator-dialog" aria-labelledby="operator-title"><h2 id="operator-title">Who’s using NetRevive?</h2><p>Choose your name so restart activity is recorded correctly. We’ll remember it on this browser.</p><form id="operator-form"><label for="operator">Your name</label><select id="operator" name="operator" required><option value="">Select your name</option></select><p id="operator-empty" class="notice" hidden>No users are configured. Ask an administrator to add one in <a href="/admin#users">Admin → Users</a>.</p><div class="actions"><button type="submit" class="primary" id="confirm-operator">Open dashboard</button><button type="button" class="secondary" id="cancel-operator">Cancel</button></div></form></dialog><div id="restart-groups" class="group-grid"></div><div class="section-head"><h2>Recent activity</h2><span class="muted" id="last-checked"></span></div><section class="panel" id="activity" aria-live="polite"></section>`;
       refreshDashboard.users = null;
       refreshDashboard.groups = null;
@@ -677,7 +673,7 @@ async function refreshDashboard(initial = false) {
         data.groups
           .map(
             (g) =>
-              `<section class="panel group-card"><div class="group-icon" aria-hidden="true">↻</div><h2>${esc(g.name)}</h2><p class="description">${esc(g.description || "Restart the equipment in this group.")}</p><button class="primary hold" data-group="${g.id}" aria-describedby="hint-${g.id}" disabled><span>${esc(g.button_label)}</span></button><p class="hint" id="hint-${g.id}">Select your name to continue.</p></section>`,
+              `<section class="panel group-card"><h2>${esc(g.name)}</h2><p class="description">${esc(g.description || "Restart the equipment in this group.")}</p><button class="primary hold" data-group="${g.id}" aria-describedby="hint-${g.id}" disabled><span>${esc(g.button_label)}</span></button><p class="hint" id="hint-${g.id}">Select your name to continue.</p></section>`,
           )
           .join("") ||
         '<section class="panel empty"><h3>No restart groups available</h3><p>An administrator can configure your restart controls in Admin.</p></section>';
