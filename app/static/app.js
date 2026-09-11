@@ -311,12 +311,31 @@ function unifiView() {
   });
   renderInventory();
 }
+const expandedInventorySwitches = new Set();
 function renderInventory() {
   const targets = config.targets;
-  $("#target-inventory").innerHTML = targets.length
-    ? `<div class="section-head"><h3>Discovered PoE ports</h3><span class="muted">${targets.length} ports</span></div>${targets.map((t) => `<div class="list-row"><div><strong>${esc(t.label || t.port_name || "Port " + t.port_number)}</strong><p>${esc(t.switch_name)} / Port ${t.port_number}</p><span class="badge">${!t.enabled ? "Disabled" : t.available ? "Available" : "Unavailable — check UniFi"}</span></div><button class="secondary small" data-target="${t.id}">Edit label & availability</button></div>`).join("")}`
+  const switches = new Map();
+  for (const target of targets) {
+    const key = JSON.stringify([target.site_id, target.switch_id]);
+    if (!switches.has(key)) switches.set(key, { name: target.switch_name, ports: [] });
+    switches.get(key).ports.push(target);
+  }
+  const inventory = $("#target-inventory");
+  inventory.innerHTML = targets.length
+    ? `<div class="section-head"><h3>Discovered PoE ports</h3><span class="muted">${targets.length} ports · ${switches.size} ${switches.size === 1 ? "switch" : "switches"}</span></div>${[...switches].map(([key, device]) =>
+      `<details class="inventory-switch" data-switch="${esc(key)}" ${expandedInventorySwitches.has(key) ? "open" : ""}><summary>${esc(device.name)} <span class="muted switch-count">${device.ports.length} ${device.ports.length === 1 ? "port" : "ports"}</span></summary><div class="switch-ports">${device.ports.sort((a, b) => a.port_number - b.port_number).map(t =>
+        `<div class="list-row"><div><strong>${esc(t.label || t.port_name || "Port " + t.port_number)}</strong><p>Port ${t.port_number}</p><span class="badge">${!t.enabled ? "Disabled" : t.available ? "Available" : "Unavailable — check UniFi"}</span></div><button class="secondary small" data-target="${t.id}">Edit label & availability</button></div>`
+      ).join("")}</div></details>`
+    ).join("")}`
     : '<p class="notice">No ports discovered yet. Discovery lists PoE-capable ports with their switch names.</p>';
-  document.querySelectorAll("[data-target]").forEach(
+  inventory.querySelectorAll("[data-switch]").forEach(section => {
+    section.addEventListener("toggle", () => {
+      if (!section.isConnected) return;
+      if (section.open) expandedInventorySwitches.add(section.dataset.switch);
+      else expandedInventorySwitches.delete(section.dataset.switch);
+    });
+  });
+  inventory.querySelectorAll("[data-target]").forEach(
     (button) =>
       (button.onclick = () => {
         const t = targets.find((t) => t.id === Number(button.dataset.target));
@@ -334,6 +353,7 @@ function renderInventory() {
           dialog.close();
           await reloadConfig();
           renderInventory();
+          inventory.querySelector(`[data-target="${t.id}"]`)?.focus({ preventScroll: true });
         });
       }),
   );

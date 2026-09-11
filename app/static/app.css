@@ -591,6 +591,29 @@ summary {
   cursor: pointer;
   font-weight: 600;
 }
+.inventory-switch {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.inventory-switch summary {
+  padding: 16px;
+  border-radius: 8px;
+  background: var(--bg);
+  overflow-wrap: anywhere;
+}
+.switch-count {
+  display: inline-block;
+  margin-left: 12px;
+  font-size: 14px;
+  font-weight: 400;
+}
+.switch-ports {
+  padding: 0 16px;
+}
+.switch-ports .list-row > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
