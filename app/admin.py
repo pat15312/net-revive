@@ -29,6 +29,7 @@ def config(request: Request):
             app.bootstrap.unifi_api_key or setting(conn, "api_key_encrypted")
         )
         settings["api_key_from_environment"] = bool(app.bootstrap.unifi_api_key)
+        settings["admin_password_from_environment"] = bool(app.bootstrap.admin_password)
         groups = [
             {**dict(row), "target_ids": [t["id"] for t in group_targets(conn, row["id"])]}
             for row in conn.execute("SELECT * FROM restart_groups ORDER BY display_order,id")

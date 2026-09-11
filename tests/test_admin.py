@@ -161,9 +161,10 @@ def test_save_membership_without_extra_confirmation(inventory):
     saved = inventory.get("/api/admin/config").json()["groups"][0]
     assert saved["target_ids"] == [1, 2]
     # Older browser tabs can still submit the removed field.
-    assert inventory.request(
-        "PUT", f"/api/admin/groups/{gid}", group([1], confirm_targets=False)
-    ).status_code == 200
+    assert (
+        inventory.request("PUT", f"/api/admin/groups/{gid}", group([1], confirm_targets=False)).status_code
+        == 200
+    )
 
 
 @pytest.mark.parametrize("targets", [[999], []])
@@ -329,3 +330,86 @@ def test_connection_draft_requires_admin(browser):
         },
     )
     assert response.status_code == 401
+
+
+def test_password_change_rotates_sessions_and_updates_login(admin, app):
+    from app.security import new_session
+
+    old_cookie = admin.client.cookies.get("netrevive_session")
+    _, other = new_session(app.state.db, admin=True)
+    response = admin.request(
+        "PUT",
+        "/api/admin/password",
+        {
+            "current_password": PASSWORD,
+            "new_password": "replacement-administrator-password",
+        },
+    )
+    assert response.status_code == 200
+    assert admin.client.cookies.get("netrevive_session") != old_cookie
+    assert "replacement-administrator-password" not in response.text
+    assert admin.get("/api/admin/config").status_code == 200
+    with app.state.db.connect() as conn:
+        assert conn.execute("SELECT COUNT(*) FROM sessions WHERE admin=1").fetchone()[0] == 1
+        assert not conn.execute("SELECT 1 FROM sessions WHERE csrf=?", (other["csrf"],)).fetchone()
+    assert admin.request("POST", "/api/login", {"password": PASSWORD}).status_code == 401
+    assert (
+        admin.request("POST", "/api/login", {"password": "replacement-administrator-password"}).status_code
+        == 200
+    )
+
+
+def test_password_change_rejects_wrong_current_password(admin):
+    assert (
+        admin.request(
+            "PUT",
+            "/api/admin/password",
+            {
+                "current_password": "incorrect",
+                "new_password": "replacement-administrator-password",
+            },
+        ).status_code
+        == 401
+    )
+    assert admin.request("POST", "/api/login", {"password": PASSWORD}).status_code == 200
+
+
+def test_password_change_validation_does_not_echo_secret(admin):
+    response = admin.request(
+        "PUT",
+        "/api/admin/password",
+        {
+            "current_password": PASSWORD,
+            "new_password": "secret",
+        },
+    )
+    assert response.status_code == 422 and "secret" not in response.text and PASSWORD not in response.text
+
+
+def test_password_change_requires_authentication(browser):
+    assert (
+        browser.request(
+            "PUT",
+            "/api/admin/password",
+            {
+                "current_password": PASSWORD,
+                "new_password": "replacement-administrator-password",
+            },
+        ).status_code
+        == 401
+    )
+
+
+def test_password_change_respects_environment_control(admin, app):
+    app.state.bootstrap.admin_password = PASSWORD
+    assert admin.get("/api/admin/config").json()["settings"]["admin_password_from_environment"]
+    response = admin.request(
+        "PUT",
+        "/api/admin/password",
+        {
+            "current_password": PASSWORD,
+            "new_password": "replacement-administrator-password",
+        },
+    )
+    assert response.status_code == 409
+    assert admin.request("POST", "/api/login", {"password": PASSWORD}).status_code == 200

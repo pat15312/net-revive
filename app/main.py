@@ -18,8 +18,16 @@ from .database import Database, put_setting, setting
 from .health import HealthMonitor
 from .logging import audit
 from .restart import RestartService, availability, group_targets, history
-from .schemas import Password, RestartRequest
-from .security import cipher_for, digest, hash_password, new_session, rate_limit, verify_password
+from .schemas import ChangePassword, Password, RestartRequest
+from .security import (
+    cipher_for,
+    digest,
+    hash_password,
+    new_session,
+    rate_limit,
+    require_admin,
+    verify_password,
+)
 from .unifi import UniFiClient, UniFiError
 
 ROOT = Path(__file__).parent
@@ -187,6 +195,23 @@ def create_app(bootstrap=None):
         if not verify_password(body.password, stored):
             raise HTTPException(401, "The administrator password is incorrect.")
         audit("admin_signed_in")
+        return authenticated_response(request)
+
+    @app.put("/api/admin/password")
+    def change_password(body: ChangePassword, request: Request):
+        require_admin(request)
+        if bootstrap.admin_password:
+            raise HTTPException(
+                409,
+                "The administrator password is managed through ADMIN_PASSWORD in the container environment.",
+            )
+        rate_limit(db, "password-change", maximum=5, window=300)
+        with db.connect(write=True) as conn:
+            if not verify_password(body.current_password, setting(conn, "admin_password_hash", "")):
+                raise HTTPException(401, "The current password is incorrect.")
+            put_setting(conn, "admin_password_hash", hash_password(body.new_password))
+            conn.execute("DELETE FROM sessions WHERE admin=1")
+        audit("admin_password_changed")
         return authenticated_response(request)
 
     @app.post("/api/logout")

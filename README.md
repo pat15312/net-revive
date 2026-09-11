@@ -8,7 +8,7 @@ A **Restart Group** is a named action such as “Restart Router” or “Restart
 
 On your first dashboard visit, choose your name in the welcome dialog. NetRevive remembers it on this browser; click your name to switch users. Then hold a restart button for two seconds. Mouse, touch, Space and Enter are supported. Releasing early, leaving the button, losing focus or hiding the page cancels the hold. Operators are attribution labels, not authenticated identities.
 
-The appearance buttons in the top navigation offer **Dark**, **Light**, and **Auto** (the default). Auto follows your device’s current theme, including changes while the page is open. Light and Dark override it; choose Auto again to clear the override. Your preference is remembered on this browser across dashboard and Admin pages. Click the NetRevive logo to return to the dashboard.
+Click the current appearance icon in the top navigation to show labelled choices for **Dark**, **Light**, and **Auto** (the default). Auto follows your device’s current theme, including changes while the page is open. Light and Dark override it; choose Auto again to clear the override. Your preference is remembered on this browser across dashboard and Admin pages. Click the NetRevive logo to return to the dashboard.
 
 Each request is recorded with its group settings, operator, health state and target snapshots. A multi-port restart continues if an individual target fails. History distinguishes confirmed acceptance, rejection, unknown acceptance and requests that were never attempted. UniFi accepting a power-cycle request does **not** prove that the equipment has finished booting.
 
@@ -90,6 +90,7 @@ Changing the configured site does not move existing targets or groups to that si
 
 - **General:** display title, preferred local hostname/URL and timezone.
 - **Users:** add, edit, remove and order operator names.
+- **Security:** change the administrator password using the current password. Other administrator sessions are signed out. Environment-managed passwords are changed through the container configuration.
 - **UniFi:** connection/key settings, site selection, connection test, discovery, target labels and enabled flags.
 - **Restart Groups:** create, edit, disable, order and delete groups; assign any number of discovered targets; customize buttons, descriptions, lockouts and recovery modes.
 - **Health Monitoring:** intervals, timeouts, stable-recovery checks, DNS names and IP connectivity destinations.

@@ -108,6 +108,7 @@ const tabs = [
   ["groups", "Restart Groups"],
   ["monitoring", "Health Monitoring"],
   ["history", "Restart History"],
+  ["security", "Security"],
 ];
 const wizardTabs = ["general", "unifi", "groups", "users", "monitoring"];
 function adminView() {
@@ -116,14 +117,14 @@ function adminView() {
   root.innerHTML =
     (setup
       ? heading("Set up NetRevive", "Build a safe, simple way to restart your network equipment.")
-      : '<h1 class="dashboard-title">Administration</h1>') +
+      : '<div class="admin-heading"><h1 class="dashboard-title">Administration</h1><button type="button" class="secondary small" id="logout">Sign out</button></div>') +
     (setup
       ? `<div class="steps" aria-label="Setup progress">${wizardTabs.map((t, i) => `<span class="${i === wizardStep ? "current" : ""}">${i + 1}. ${tabs.find((x) => x[0] === t)[1]}</span>`).join("")}</div>`
       : `<nav class="tabs" aria-label="Admin sections">${tabs.map(([id, label]) => `<a class="${pageTab === id ? "active" : ""}" href="#${id}">${label}</a>`).join("")}</nav>`) +
     '<div id="admin-content"></div>' +
     (setup
       ? `<div class="actions"><button class="secondary" id="wizard-back" ${wizardStep === 0 ? "disabled" : ""}>← Back</button><button class="primary" id="wizard-next">${wizardStep === 4 ? "Finish setup" : "Continue →"}</button><span class="help">Save your changes before continuing.</span></div>`
-      : '<div class="actions"><button class="secondary small" id="logout">Sign out</button><a href="/">Back to dashboard</a></div>');
+      : '');
   $("#hostname").textContent = config.settings.hostname;
   if (!tabs.some((x) => x[0] === pageTab)) pageTab = "general";
   ({
@@ -133,6 +134,7 @@ function adminView() {
     groups: groupsView,
     monitoring: monitoringView,
     history: historyView,
+    security: securityView,
   })[pageTab]();
   $("#logout")?.addEventListener("click", async () => {
     try {
@@ -194,6 +196,20 @@ function generalView() {
     generalView();
     $("#hostname").textContent = config.settings.hostname;
     toast("General settings saved.");
+  });
+}
+function securityView() {
+  $("#admin-content").innerHTML = config.settings.admin_password_from_environment
+    ? '<section class="panel"><h2>Administrator password</h2><p>The password is managed through the container’s ADMIN_PASSWORD environment variable. Update it in Portainer to change the password.</p></section>'
+    : `<section class="panel"><h2>Change administrator password</h2><form id="password-form">${field("Current password", "current_password", "", "password", 'required autocomplete="current-password" maxlength="256"')}${field("New password", "new_password", "", "password", 'required autocomplete="new-password" minlength="12" maxlength="256"')}${field("Confirm new password", "confirm_password", "", "password", 'required autocomplete="new-password" minlength="12" maxlength="256"')}<p class="help">Use at least 12 characters. Other administrator sessions will be signed out.</p><button type="submit" class="primary">Change password</button></form></section>`;
+  bindForm("password-form", async data => {
+    if (data.new_password !== data.confirm_password) throw new Error("The new passwords do not match.");
+    await api("/api/admin/password", "PUT", {
+      current_password: data.current_password,
+      new_password: data.new_password,
+    });
+    securityView();
+    toast("Administrator password changed.");
   });
 }
 function usersView() {

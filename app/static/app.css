@@ -525,7 +525,7 @@ input[type="checkbox"] {
   display: flex;
   gap: 6px;
   margin: 0 0 26px;
-  overflow-x: auto;
+  flex-wrap: wrap;
   padding-bottom: 6px;
 }
 .tabs a {
@@ -834,9 +834,25 @@ th {
   line-height: 1.5;
   margin: 0 0 16px;
 }
+.theme-control { position: relative; }
+#theme-trigger {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+}
 .theme-options {
-  display: inline-flex;
-  align-items: center;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 150px;
   padding: 3px;
   gap: 2px;
   background: var(--bg);
@@ -846,9 +862,9 @@ th {
 .theme-options button {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 7px;
-  min-height: 38px;
+  justify-content: flex-start;
+  gap: 10px;
+  min-height: 44px;
   min-width: 38px;
   padding: 7px 10px;
   color: var(--muted);
@@ -865,10 +881,6 @@ th {
 }
 .theme-options button:hover {
   color: var(--green);
-}
-@media (max-width: 700px) {
-  .theme-options button span { display: none; }
-  .theme-options button { padding: 7px; }
 }
 .dashboard-user button {
   display: inline-flex;
@@ -889,3 +901,12 @@ th {
   .brand-icon { width: 32px; height: 32px; margin-right: 8px; }
   .topbar nav { gap: 8px; font-size: 12px; }
 }
+
+.admin-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.admin-heading .dashboard-title { margin: 0; }

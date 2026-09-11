@@ -14,6 +14,11 @@ class Password(StrictModel):
     password: str = Field(min_length=1, max_length=256)
 
 
+class ChangePassword(StrictModel):
+    current_password: str = Field(min_length=1, max_length=256)
+    new_password: str = Field(min_length=12, max_length=256)
+
+
 class General(StrictModel):
     title: str = Field(min_length=1, max_length=80)
     hostname: str = Field(min_length=1, max_length=253)

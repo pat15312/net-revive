@@ -6,14 +6,19 @@ const assert=require('node:assert/strict');
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
 try{
  const page=await browser.newPage({viewport:{width:1360,height:1000}});const errors=[],remote=[];
+ const chooseTheme=async name=>{
+   await page.locator('#theme-trigger').click();
+   await page.getByRole('button',{name:name+' theme',exact:true}).click();
+   assert.equal(await page.locator('#theme-options').isVisible(),false);
+ };
  page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(!r.url().startsWith('http://127.0.0.1:8019'))remote.push(r.url());});
  await page.emulateMedia({colorScheme:'light'});
  await page.goto('http://127.0.0.1:8019/');
  assert.equal(await page.locator('html').getAttribute('data-theme'),'light');
  await page.emulateMedia({colorScheme:'dark'});
  await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');
- assert.equal(await page.getByRole('button',{name:'Auto theme',exact:true}).getAttribute('aria-pressed'),'true');
- await page.getByRole('button',{name:'Light theme',exact:true}).click();
+ assert.equal(await page.locator('[data-theme-choice=system]').getAttribute('aria-pressed'),'true');
+ await chooseTheme('Light');
  assert.equal(await page.locator('html').getAttribute('data-theme'),'light');
  await page.getByLabel('Administrator password',{exact:true}).fill('browser-testing-password');
  await page.getByLabel('Confirm password').fill('browser-testing-password');
@@ -99,10 +104,10 @@ try{
  const button=page.getByRole('button',{name:'Restart Router',exact:true});
  await button.click();await page.waitForTimeout(200);assert.equal(await page.locator('.activity').count(),0);
  await button.focus();await page.keyboard.down('Space');await page.waitForTimeout(700);await page.keyboard.up('Space');assert.equal(await page.locator('.activity').count(),0);
- const rightEdges=await page.evaluate(()=>[document.querySelector('.theme-options').getBoundingClientRect().right,document.querySelector('#restart-groups').getBoundingClientRect().right]);
+ const rightEdges=await page.evaluate(()=>[document.querySelector('#theme-trigger').getBoundingClientRect().right,document.querySelector('#restart-groups').getBoundingClientRect().right]);
  assert.ok(Math.abs(rightEdges[0]-rightEdges[1])<2);
  await page.screenshot({path:'test-results/dashboard-desktop.png',fullPage:true});
- await page.getByRole('button',{name:'Dark theme',exact:true}).click();
+ await chooseTheme('Dark');
  assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
  await page.screenshot({path:'test-results/dashboard-desktop-dark.png',fullPage:true});
  await page.emulateMedia({colorScheme:'light'});
@@ -135,19 +140,43 @@ try{
  assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
  await page.getByText('Restart history',{exact:true}).waitFor();await page.locator('summary').first().click();
  await page.getByText('switch-a / 1',{exact:false}).first().waitFor();
- for(const hash of ['general','users','unifi','groups','monitoring']){
+ for(const hash of ['general','users','unifi','groups','monitoring','security']){
   await page.goto('http://127.0.0.1:8019/admin#'+hash);await page.locator('#admin-content .panel').first().waitFor();
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),hash+' mobile overflow');
   assert.equal(await page.locator('#app .eyebrow').count(),0);
+  assert.equal(await page.getByRole('link',{name:'Back to dashboard',exact:true}).count(),0);
+  const headingRow=await page.evaluate(()=>{
+    const heading=document.querySelector('.admin-heading h1').getBoundingClientRect();
+    const logout=document.querySelector('#logout').getBoundingClientRect();
+    return {difference:Math.abs(heading.y+heading.height/2-logout.y-logout.height/2),right:logout.x>heading.x};
+  });
+  assert.ok(headingRow.difference<2 && headingRow.right);
+  assert.ok(await page.locator('.tabs').evaluate(el=>el.scrollWidth<=el.clientWidth));
   assert.equal(await page.getByRole('heading',{name:'Administration',exact:true}).evaluate(el=>getComputedStyle(el).fontSize),'21px');
  }
+ await page.getByLabel('Current password',{exact:true}).fill('browser-testing-password');
+ await page.getByLabel('New password',{exact:true}).fill('browser-updated-password');
+ await page.getByLabel('Confirm new password',{exact:true}).fill('browser-updated-password');
+ await page.getByRole('button',{name:'Change password',exact:true}).click();
+ await page.getByText('Administrator password changed.',{exact:true}).waitFor();
+ assert.equal(await page.getByLabel('New password',{exact:true}).inputValue(),'');
+ await page.locator('#theme-trigger').focus();
+ await page.keyboard.press('ArrowDown');
+ assert.equal(await page.evaluate(()=>document.activeElement.getAttribute('aria-pressed')),'true');
+ assert.equal(await page.locator('#theme-options').isVisible(),true);
+ await page.keyboard.press('Escape');
+ assert.equal(await page.locator('#theme-options').isVisible(),false);
+ assert.equal(await page.evaluate(()=>document.activeElement.id),'theme-trigger');
+ await page.locator('#theme-trigger').click();
+ await page.getByRole('heading',{name:'Administration',exact:true}).click();
+ assert.equal(await page.locator('#theme-options').isVisible(),false);
  assert.equal(await page.getByRole('navigation',{name:'Main',exact:true}).getByRole('link',{name:'Dashboard',exact:true}).count(),0);
- await page.getByRole('button',{name:'Auto theme',exact:true}).click();
+ await chooseTheme('Auto');
  assert.equal(await page.locator('html').getAttribute('data-theme'),'light');
  assert.equal(await page.evaluate(()=>localStorage.getItem('netrevive.theme')),null);
  await page.reload();
- await page.getByRole('button',{name:'Auto theme',exact:true}).waitFor();
- assert.equal(await page.getByRole('button',{name:'Auto theme',exact:true}).getAttribute('aria-pressed'),'true');
+ await page.locator('#theme-trigger').waitFor();
+ assert.equal(await page.locator('[data-theme-choice=system]').getAttribute('aria-pressed'),'true');
  await page.emulateMedia({colorScheme:'dark'});
  await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');
  await page.getByRole('link',{name:'NetRevive dashboard',exact:true}).click();
