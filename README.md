@@ -6,9 +6,9 @@ NetRevive is a local network recovery application. It lets people deliberately r
 
 A **Restart Group** is a named action such as “Restart Router” or “Restart APs”. Its administrator-selected ports can span multiple switches. One port may belong to several groups. Switch identity is always part of port identity; port 18 on two switches represents two different targets.
 
-On your first dashboard visit, choose your name in the welcome dialog. NetRevive remembers it on this browser; use **Change user** to switch names. Then hold a restart button for two seconds. Mouse, touch, Space and Enter are supported. Releasing early, leaving the button, losing focus or hiding the page cancels the hold. Operators are attribution labels, not authenticated identities.
+On your first dashboard visit, choose your name in the welcome dialog. NetRevive remembers it on this browser; click your name to switch users. Then hold a restart button for two seconds. Mouse, touch, Space and Enter are supported. Releasing early, leaving the button, losing focus or hiding the page cancels the hold. Operators are attribution labels, not authenticated identities.
 
-Use the **Dark mode** control in the top navigation to switch themes. NetRevive follows the device theme until you choose a preference, then remembers that choice on the browser across dashboard and Admin pages.
+The theme selector in the top navigation offers **System** (the default), **Light**, and **Dark**. System follows your device’s current theme, including changes while the page is open. Light and Dark override it; choose System again to clear the override. Your preference is remembered on this browser across dashboard and Admin pages. Click the NetRevive logo to return to the dashboard.
 
 Each request is recorded with its group settings, operator, health state and target snapshots. A multi-port restart continues if an individual target fails. History distinguishes confirmed acceptance, rejection, unknown acceptance and requests that were never attempted. UniFi accepting a power-cycle request does **not** prove that the equipment has finished booting.
 

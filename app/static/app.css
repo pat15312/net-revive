@@ -834,35 +834,24 @@ th {
   line-height: 1.5;
   margin: 0 0 16px;
 }
-.theme-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-width: 44px;
+.topbar .theme-select {
+  width: auto;
+  min-width: 100px;
   min-height: 44px;
-  padding: 8px 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--paper);
-  color: var(--ink);
   font-size: 13px;
   font-weight: 600;
+  background: var(--paper);
 }
-.theme-toggle:hover {
-  background: var(--green-soft);
+.dashboard-user button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
 }
-.theme-sun,
-:root[data-theme="dark"] .theme-moon {
-  display: none;
-}
-:root[data-theme="dark"] .theme-sun {
-  display: block;
+#current-operator {
+  overflow-wrap: anywhere;
 }
 @media (max-width: 700px) {
-  .theme-toggle > span {
-    display: none;
-  }
   .topbar nav {
     gap: 12px;
   }

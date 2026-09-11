@@ -12,8 +12,8 @@ try{
  assert.equal(await page.locator('html').getAttribute('data-theme'),'light');
  await page.emulateMedia({colorScheme:'dark'});
  await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');
- assert.equal(await page.getByRole('button',{name:'Dark mode',exact:true}).getAttribute('aria-pressed'),'true');
- await page.getByRole('button',{name:'Dark mode',exact:true}).click();
+ assert.equal(await page.getByRole('combobox',{name:'Colour theme',exact:true}).inputValue(),'system');
+ await page.getByRole('combobox',{name:'Colour theme',exact:true}).selectOption('light');
  assert.equal(await page.locator('html').getAttribute('data-theme'),'light');
  await page.getByLabel('Administrator password',{exact:true}).fill('browser-testing-password');
  await page.getByLabel('Confirm password').fill('browser-testing-password');
@@ -99,22 +99,22 @@ try{
  await button.click();await page.waitForTimeout(200);assert.equal(await page.locator('.activity').count(),0);
  await button.focus();await page.keyboard.down('Space');await page.waitForTimeout(700);await page.keyboard.up('Space');assert.equal(await page.locator('.activity').count(),0);
  await page.screenshot({path:'test-results/dashboard-desktop.png',fullPage:true});
- await page.getByRole('button',{name:'Dark mode',exact:true}).click();
+ await page.getByRole('combobox',{name:'Colour theme',exact:true}).selectOption('dark');
  assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
  await page.screenshot({path:'test-results/dashboard-desktop-dark.png',fullPage:true});
  await page.emulateMedia({colorScheme:'light'});
  assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
  await button.focus();await page.keyboard.down('Space');await page.waitForTimeout(2250);await page.keyboard.up('Space');
  await page.locator('.activity').first().waitFor();assert.equal(await button.isDisabled(),true);
- await page.reload();await page.getByRole('button',{name:'Change user',exact:true}).waitFor();
+ await page.reload();await page.getByRole('button',{name:'Operator A, change user',exact:true}).waitFor();
  assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
  assert.equal(await page.locator('#current-operator').textContent(),'Operator A');
  assert.equal(await page.locator('#operator-dialog').evaluate(el=>el.open),false);
- await page.getByRole('button',{name:'Change user',exact:true}).click();
+ await page.getByRole('button',{name:'Operator A, change user',exact:true}).click();
  await page.getByRole('dialog',{name:'Who’s using NetRevive?'}).waitFor();
  await page.getByRole('button',{name:'Cancel',exact:true}).click();
  assert.equal(await page.locator('#current-operator').textContent(),'Operator A');
- await page.getByRole('button',{name:'Change user',exact:true}).click();
+ await page.getByRole('button',{name:'Operator A, change user',exact:true}).click();
  await page.getByLabel('Your name',{exact:true}).selectOption('Operator B');
  await page.getByRole('button',{name:'Open dashboard',exact:true}).click();
  assert.equal(await page.locator('#current-operator').textContent(),'Operator B');
@@ -135,6 +135,20 @@ try{
   await page.goto('http://127.0.0.1:8019/admin#'+hash);await page.locator('#admin-content .panel').first().waitFor();
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),hash+' mobile overflow');
  }
+ assert.equal(await page.getByRole('navigation',{name:'Main',exact:true}).getByRole('link',{name:'Dashboard',exact:true}).count(),0);
+ await page.getByRole('combobox',{name:'Colour theme',exact:true}).selectOption('system');
+ assert.equal(await page.locator('html').getAttribute('data-theme'),'light');
+ assert.equal(await page.evaluate(()=>localStorage.getItem('netrevive.theme')),null);
+ await page.reload();
+ await page.getByRole('combobox',{name:'Colour theme',exact:true}).waitFor();
+ assert.equal(await page.getByRole('combobox',{name:'Colour theme',exact:true}).inputValue(),'system');
+ await page.emulateMedia({colorScheme:'dark'});
+ await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');
+ await page.getByRole('link',{name:'NetRevive dashboard',exact:true}).click();
+ await page.getByRole('heading',{name:'Network overview',exact:true}).waitFor();
+ assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
+ assert.equal(await page.getByRole('button',{name:'Operator A, change user',exact:true}).textContent(),'Operator A⌄');
+ await page.screenshot({path:'test-results/dashboard-system-theme-mobile.png',fullPage:true});
  assert.deepEqual(errors,[]);assert.deepEqual(remote,[]);
  console.log('PASS: complete first-run setup, authenticated administration, real API persistence, click/short-hold cancellation, keyboard hold restart, lockout, remembered operator, detailed history, mobile layouts, no remote assets or JS errors.');
 }finally{await browser.close();}

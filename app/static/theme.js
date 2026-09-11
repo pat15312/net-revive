@@ -7,11 +7,8 @@
   const apply = () => {
     const dark = preference === "dark" || (preference !== "light" && system.matches);
     document.documentElement.dataset.theme = dark ? "dark" : "light";
-    const button = document.getElementById("theme-toggle");
-    if (button) {
-      button.setAttribute("aria-pressed", String(dark));
-      button.title = dark ? "Switch to light mode" : "Switch to dark mode";
-    }
+    const select = document.getElementById("theme-select");
+    if (select) select.value = ["light", "dark"].includes(preference) ? preference : "system";
   };
   apply();
   system.addEventListener("change", apply);
@@ -23,9 +20,12 @@
   });
   document.addEventListener("DOMContentLoaded", () => {
     apply();
-    document.getElementById("theme-toggle").addEventListener("click", () => {
-      preference = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
-      try { localStorage.setItem(key, preference); } catch {}
+    document.getElementById("theme-select").addEventListener("change", event => {
+      preference = event.target.value;
+      try {
+        if (preference === "system") localStorage.removeItem(key);
+        else localStorage.setItem(key, preference);
+      } catch {}
       apply();
     });
   });

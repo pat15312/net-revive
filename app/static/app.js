@@ -572,7 +572,7 @@ async function refreshDashboard(initial = false) {
     if (initial || !$("#network-health")) {
       root.innerHTML =
         `<h1 class="dashboard-title">${esc(data.title === "NetRevive" ? "Network overview" : data.title)}</h1>` +
-        `<section class="panel"><div id="network-health" aria-live="polite"></div><div class="status-grid" id="status-grid"></div></section><div class="section-head restart-heading"><h2>Restart equipment</h2><div class="dashboard-user"><span id="current-operator"></span><button type="button" class="secondary small" id="change-operator">Change user</button></div></div><dialog id="operator-dialog" aria-labelledby="operator-title"><h2 id="operator-title">Who’s using NetRevive?</h2><p>Choose your name so restart activity is recorded correctly. We’ll remember it on this browser.</p><form id="operator-form"><label for="operator">Your name</label><select id="operator" name="operator" required><option value="">Select your name</option></select><p id="operator-empty" class="notice" hidden>No users are configured. Ask an administrator to add one in <a href="/admin#users">Admin → Users</a>.</p><div class="actions"><button type="submit" class="primary" id="confirm-operator">Open dashboard</button><button type="button" class="secondary" id="cancel-operator">Cancel</button></div></form></dialog><div id="restart-groups" class="group-grid"></div><div class="section-head"><h2>Recent activity</h2><span class="muted" id="last-checked"></span></div><section class="panel" id="activity" aria-live="polite"></section>`;
+        `<section class="panel"><div id="network-health" aria-live="polite"></div><div class="status-grid" id="status-grid"></div></section><div class="section-head restart-heading"><h2>Restart equipment</h2><div class="dashboard-user"><button type="button" class="secondary small" id="change-operator" title="Change user" aria-haspopup="dialog" aria-controls="operator-dialog"><span id="current-operator">Choose user</span><span aria-hidden="true">⌄</span></button></div></div><dialog id="operator-dialog" aria-labelledby="operator-title"><h2 id="operator-title">Who’s using NetRevive?</h2><p>Choose your name so restart activity is recorded correctly. We’ll remember it on this browser.</p><form id="operator-form"><label for="operator">Your name</label><select id="operator" name="operator" required><option value="">Select your name</option></select><p id="operator-empty" class="notice" hidden>No users are configured. Ask an administrator to add one in <a href="/admin#users">Admin → Users</a>.</p><div class="actions"><button type="submit" class="primary" id="confirm-operator">Open dashboard</button><button type="button" class="secondary" id="cancel-operator">Cancel</button></div></form></dialog><div id="restart-groups" class="group-grid"></div><div class="section-head"><h2>Recent activity</h2><span class="muted" id="last-checked"></span></div><section class="panel" id="activity" aria-live="polite"></section>`;
       refreshDashboard.users = null;
       refreshDashboard.groups = null;
       $("#change-operator").onclick = showOperatorPicker;
@@ -589,7 +589,7 @@ async function refreshDashboard(initial = false) {
         }
         currentOperator = selected.operator;
         try { localStorage.setItem("netrevive.operator", currentOperator); } catch {}
-        $("#current-operator").textContent = currentOperator;
+        updateOperatorLabel();
         $("#operator-dialog").close();
         updateButtons();
       });
@@ -598,7 +598,7 @@ async function refreshDashboard(initial = false) {
     if (!data.operators.some(user => user.name === currentOperator)) {
       currentOperator = "";
     }
-    $("#current-operator").textContent = currentOperator;
+    updateOperatorLabel();
     if (JSON.stringify(data.operators) !== refreshDashboard.users) {
       const pending = $("#operator").value || currentOperator;
       $("#operator").innerHTML =
@@ -697,6 +697,10 @@ async function refreshDashboard(initial = false) {
   } finally {
     refreshing = false;
   }
+}
+function updateOperatorLabel() {
+  $("#current-operator").textContent = currentOperator || "Choose user";
+  $("#change-operator").setAttribute("aria-label", currentOperator ? `${currentOperator}, change user` : "Choose user");
 }
 function showOperatorPicker() {
   $("#operator").value = currentOperator;
