@@ -87,9 +87,32 @@ def save_unifi(body: UniFiSettings, request: Request):
 
 
 @router.post("/unifi/test")
-async def test_unifi(request: Request):
+async def test_unifi(request: Request, body: UniFiSettings | None = None):
+    app = request.app.state
     try:
-        sites = await request.app.state.client_factory().sites()
+        if body is None:
+            client = app.client_factory()
+        else:
+            # Read the saved origin and key in one snapshot so a concurrent save
+            # cannot cause a different controller's key to be sent by this test.
+            with app.db.connect() as conn:
+                conn.execute("BEGIN")
+                saved_url = setting(conn, "controller_url", "")
+                encrypted = setting(conn, "api_key_encrypted", "")
+            if saved_url not in ("", body.controller_url) and not body.api_key:
+                raise HTTPException(
+                    422,
+                    "Enter an API key when testing a different controller; stored keys are not sent to a new host.",
+                )
+            if body.api_key and app.bootstrap.unifi_api_key:
+                raise HTTPException(
+                    422, "UNIFI_API_KEY is set in the environment. Remove it before managing the key here."
+                )
+            api_key = body.api_key or app.bootstrap.unifi_api_key
+            if not api_key and encrypted:
+                api_key = app.cipher.decrypt(encrypted.encode()).decode()
+            client = app.client_factory(settings=body.model_dump(exclude={"api_key"}), api_key=api_key)
+        sites = await client.sites()
         return {
             "ok": True,
             "sites": [{"id": str(s["id"]), "name": s.get("name", "UniFi site")} for s in sites],

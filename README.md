@@ -59,7 +59,7 @@ The container runs as UID/GID `10001`, drops capabilities, uses a read-only root
 
 1. Create an administrator password of at least 12 characters. If `ADMIN_PASSWORD` was provided, sign in with it instead. Until a password is claimed, first-run setup is available to visitors: complete setup on a trusted network before allowing general access.
 2. Save the display title, friendly hostname and IANA display timezone.
-3. Enter the local controller's HTTPS URL, controller type and API key; save, then test the connection.
+3. Enter the local controller's HTTPS URL, controller type and API key; test the entered details, then save the connection. Testing does not change the saved configuration.
 4. Choose a discovered site and select **Save site & discover ports**. Switch/port IDs come from UniFi, not manual text entry.
 5. Create a group, choose its targets, label the restart button, set recovery behaviour and explicitly confirm the selected ports.
 6. Add the initial operator names.

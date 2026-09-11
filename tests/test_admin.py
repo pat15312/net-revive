@@ -225,3 +225,109 @@ def test_no_remote_assets(browser):
     for path in ("/static/app.js", "/static/app.css", "/static/favicon.svg", "/healthz"):
         assert browser.get(path).status_code == 200
     assert "frame-ancestors 'none'" in html.headers["content-security-policy"]
+
+
+@pytest.mark.parametrize("saved_key", [False, True])
+def test_connection_draft_uses_entered_values_without_saving(admin, app, monkeypatch, saved_key):
+    from app.unifi import UniFiClient
+    import httpx
+
+    if saved_key:
+        assert (
+            admin.request(
+                "PUT",
+                "/api/admin/unifi",
+                {
+                    "controller_url": "https://controller.test",
+                    "api_key": "saved-secret",
+                },
+            ).status_code
+            == 200
+        )
+    before = admin.get("/api/admin/config").json()
+    calls = []
+
+    def factory(settings, api_key):
+        calls.append((settings, api_key))
+        return UniFiClient(
+            settings,
+            api_key,
+            httpx.MockTransport(
+                lambda request: httpx.Response(200, json={"data": [{"id": "draft-site", "name": "Draft"}]})
+            ),
+        )
+
+    monkeypatch.setattr("app.main.UniFiClient", factory)
+    app.state.client_factory = app.state.real_client_factory
+    response = admin.request(
+        "POST",
+        "/api/admin/unifi/test",
+        {
+            "controller_url": "https://controller.test",
+            "api_prefix": "/integration/v1",
+            "verify_tls": False,
+            "api_key": "" if saved_key else "draft-secret",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["sites"] == [{"id": "draft-site", "name": "Draft"}]
+    assert calls[0][0]["api_prefix"] == "/integration/v1"
+    assert calls[0][0]["verify_tls"] is False
+    assert calls[0][1] == ("saved-secret" if saved_key else "draft-secret")
+    assert admin.get("/api/admin/config").json() == before
+    assert "secret" not in response.text
+
+
+def test_connection_draft_does_not_forward_stored_key_to_new_host(inventory, app):
+    app.state.client_factory = lambda **kwargs: pytest.fail("Must reject before contacting controller")
+    before = inventory.get("/api/admin/config").json()
+    response = inventory.request(
+        "POST",
+        "/api/admin/unifi/test",
+        {
+            "controller_url": "https://different.test",
+        },
+    )
+    assert response.status_code == 422
+    assert "stored keys are not sent" in response.text
+    assert inventory.get("/api/admin/config").json() == before
+
+
+def test_failed_connection_draft_keeps_working_configuration(inventory, app):
+    before = inventory.get("/api/admin/config").json()
+    app.state.fake.unavailable = True
+    response = inventory.request(
+        "POST",
+        "/api/admin/unifi/test",
+        {
+            "controller_url": "https://different.test",
+            "api_key": "invalid-draft-key",
+        },
+    )
+    assert response.status_code == 502
+    assert "invalid-draft-key" not in response.text
+    assert inventory.get("/api/admin/config").json() == before
+
+
+def test_connection_draft_validates_without_echoing_key(admin):
+    response = admin.request(
+        "POST",
+        "/api/admin/unifi/test",
+        {
+            "controller_url": "http://controller.test",
+            "api_key": "draft-secret",
+        },
+    )
+    assert response.status_code == 422 and "draft-secret" not in response.text
+
+
+def test_connection_draft_requires_admin(browser):
+    response = browser.request(
+        "POST",
+        "/api/admin/unifi/test",
+        {
+            "controller_url": "https://controller.test",
+            "api_key": "draft-secret",
+        },
+    )
+    assert response.status_code == 401

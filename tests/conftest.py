@@ -68,7 +68,8 @@ class Browser:
 def app(tmp_path):
     instance = create_app(Bootstrap(database_path=str(tmp_path / "db.sqlite"), background=False))
     instance.state.fake = FakeUniFi()
-    instance.state.client_factory = lambda: instance.state.fake
+    instance.state.real_client_factory = instance.state.client_factory
+    instance.state.client_factory = lambda **kwargs: instance.state.fake
     return instance
 
 

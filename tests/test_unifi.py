@@ -113,3 +113,26 @@ async def test_self_hosted_prefix():
     client = UniFiClient({**SETTINGS, "api_prefix": "/integration/v1"}, "key", httpx.MockTransport(handler))
     assert await client.sites() == []
     assert paths == ["/integration/v1/sites"]
+
+
+@pytest.mark.parametrize("method", ["GET", "POST"])
+async def test_certificate_failure_is_specific_and_does_not_expose_upstream_details(method):
+    import ssl
+
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        try:
+            raise ssl.SSLCertVerificationError(1, "secret-key sensitive certificate detail")
+        except ssl.SSLCertVerificationError as exc:
+            raise httpx.ConnectError("secret-key upstream detail") from exc
+
+    client = UniFiClient(SETTINGS, "secret-key", httpx.MockTransport(handler))
+    with pytest.raises(UniFiError) as error:
+        await client.request(method, "/sites")
+    assert "TLS certificate could not be verified" in str(error.value)
+    assert "secret-key" not in str(error.value)
+    assert "sensitive certificate detail" not in str(error.value)
+    assert error.value.uncertain == (method == "POST")
+    assert len(calls) == 1

@@ -68,11 +68,14 @@ def create_app(bootstrap=None):
     app = FastAPI(title="NetRevive", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.db, app.state.bootstrap, app.state.cipher = db, bootstrap, cipher
 
-    def client_factory():
-        with db.connect() as conn:
-            encrypted = setting(conn, "api_key_encrypted", "")
-        key = bootstrap.unifi_api_key or (cipher.decrypt(encrypted.encode()).decode() if encrypted else "")
-        return UniFiClient(db.settings(), key)
+    def client_factory(settings=None, api_key=None):
+        if api_key is None:
+            with db.connect() as conn:
+                encrypted = setting(conn, "api_key_encrypted", "")
+            api_key = bootstrap.unifi_api_key or (
+                cipher.decrypt(encrypted.encode()).decode() if encrypted else ""
+            )
+        return UniFiClient(settings if settings is not None else db.settings(), api_key)
 
     app.state.client_factory = client_factory
     app.state.health = HealthMonitor(db, lambda: app.state.client_factory())

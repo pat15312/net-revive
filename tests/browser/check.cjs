@@ -16,8 +16,15 @@ try{
  await page.getByRole('button',{name:'Continue →'}).click();
  await page.getByLabel('Controller URL').fill('https://controller.test');
  await page.getByLabel('API key',{exact:true}).fill('browser-test-api-key');
- await page.getByRole('button',{name:'Save connection',exact:true}).click();
+ await page.getByLabel('Verify the controller’s TLS certificate (recommended)').uncheck();
+ const draftRequest=page.waitForRequest(r=>r.url().endsWith('/api/admin/unifi/test'));
  await page.getByRole('button',{name:'Test UniFi connection'}).click();
+ assert.equal((await draftRequest).postDataJSON().verify_tls,false);
+ await page.getByText('Connected and authenticated. These settings have not been saved. Click Save connection to use them.',{exact:true}).waitFor();
+ assert.equal(await page.getByLabel('API key',{exact:true}).inputValue(),'browser-test-api-key');
+ assert.equal((await (await page.request.get('http://127.0.0.1:8019/api/admin/config')).json()).settings.api_key_configured,false);
+ await page.getByRole('button',{name:'Save connection',exact:true}).click();
+ await page.getByLabel('Replace API key (leave blank to keep it)').waitFor();
  await page.getByLabel('UniFi site',{exact:true}).selectOption('site-a');
  await page.getByRole('button',{name:'Save site & discover ports'}).click();
  await page.getByText('Discovered PoE ports',{exact:true}).waitFor();

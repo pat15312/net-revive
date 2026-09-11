@@ -244,29 +244,52 @@ function userEditor(user = {}) {
 function unifiView() {
   const s = config.settings;
   $("#admin-content").innerHTML =
-    `<section class="panel"><h2>Connect to UniFi</h2><p>Enter the local HTTPS address of the console or server running UniFi Network, such as https://controller.lan or https://controller.lan:8443. Keep the port if present, but remove any path after it. NetRevive connects directly to this address.</p><form id="unifi-form">${field("Controller URL", "controller_url", s.controller_url, "url", 'required placeholder="https://controller.lan"')}<label for="api_prefix">Controller type</label><select name="api_prefix" id="api_prefix"><option value="/proxy/network/integration/v1" ${s.api_prefix.includes("proxy") ? "selected" : ""}>UniFi OS console</option><option value="/integration/v1" ${!s.api_prefix.includes("proxy") ? "selected" : ""}>Self-hosted Network application</option></select>${s.api_key_from_environment ? '<p class="notice">The API key is managed through the container environment.</p>' : field(s.api_key_configured ? "Replace API key (leave blank to keep it)" : "API key", "api_key", "", "password", 'autocomplete="off" maxlength="4096"')}<p class="help">Open UniFi Network on your local controller and find Integrations for the API documentation and key setup supported by your version. The menu location varies by release. See the <a href="https://help.ui.com/hc/en-us/articles/30076656117655-Getting-Started-with-the-Official-UniFi-API" target="_blank" rel="noopener noreferrer">official UniFi API guide</a>. After saving, NetRevive never sends the stored key back to your browser.</p>${check("Verify the controller’s TLS certificate (recommended)", "verify_tls", s.verify_tls)}<p class="help">For a private CA, install its certificate in the container. Disabling verification makes the connection vulnerable to impersonation.</p><div class="actions"><button class="primary" type="submit">Save connection</button><button class="secondary" type="button" id="test-unifi">Test UniFi connection</button></div><div id="connection-result" role="status"></div></form></section><section class="panel"><h2>Site & PoE equipment</h2><p>Select a site, then discover its switches and restartable ports.</p><form id="site-form"><label for="site">UniFi site</label><select id="site" name="site_id" required><option value="">Choose a site</option>${sites.map((site) => `<option value="${esc(site.id)}" ${site.id === s.site_id ? "selected" : ""}>${esc(site.name)}</option>`).join("")}${s.site_id && !sites.some((x) => x.id === s.site_id) ? `<option selected value="${esc(s.site_id)}">Configured site — test connection to refresh names</option>` : ""}</select><div class="actions"><button class="primary" type="submit">Save site & discover ports</button></div></form><div id="target-inventory"></div></section>`;
-  bindForm("unifi-form", async (data) => {
-    await api("/api/admin/unifi", "PUT", {
-      controller_url: data.controller_url,
+    `<section class="panel"><h2>Connect to UniFi</h2><p>Enter the local HTTPS address of the console or server running UniFi Network, such as https://controller.lan or https://controller.lan:8443. Keep the port if present, but remove any path after it. NetRevive connects directly to this address.</p><form id="unifi-form">${field("Controller URL", "controller_url", s.controller_url, "url", 'required placeholder="https://controller.lan"')}<label for="api_prefix">Controller type</label><select name="api_prefix" id="api_prefix"><option value="/proxy/network/integration/v1" ${s.api_prefix.includes("proxy") ? "selected" : ""}>UniFi OS console</option><option value="/integration/v1" ${!s.api_prefix.includes("proxy") ? "selected" : ""}>Self-hosted Network application</option></select>${s.api_key_from_environment ? '<p class="notice">The API key is managed through the container environment.</p>' : field(s.api_key_configured ? "Replace API key (leave blank to keep it)" : "API key", "api_key", "", "password", 'autocomplete="off" maxlength="4096"')}<p class="help">Open UniFi Network on your local controller and find Integrations for the API documentation and key setup supported by your version. The menu location varies by release. See the <a href="https://help.ui.com/hc/en-us/articles/30076656117655-Getting-Started-with-the-Official-UniFi-API" target="_blank" rel="noopener noreferrer">official UniFi API guide</a>. After saving, NetRevive never sends the stored key back to your browser.</p>${check("Verify the controller’s TLS certificate (recommended)", "verify_tls", s.verify_tls)}<p class="help">Self-signed certificates and certificates that do not match the Controller URL will fail verification. To keep verification enabled, use a matching address and a certificate trusted by NetRevive. Disabling verification keeps HTTPS encryption but allows controller impersonation.</p><div class="actions"><button class="primary" type="submit">Save connection</button><button class="secondary" type="button" id="test-unifi">Test UniFi connection</button></div><div id="connection-result" role="status"></div></form></section><section class="panel"><h2>Site & PoE equipment</h2><p>Select a site, then discover its switches and restartable ports.</p><form id="site-form"><label for="site">UniFi site</label><select id="site" name="site_id" required><option value="">Choose a site</option>${sites.map((site) => `<option value="${esc(site.id)}" ${site.id === s.site_id ? "selected" : ""}>${esc(site.name)}</option>`).join("")}${s.site_id && !sites.some((x) => x.id === s.site_id) ? `<option selected value="${esc(s.site_id)}">Configured site — test connection to refresh names</option>` : ""}</select><div class="actions"><button class="primary" type="submit">Save site & discover ports</button></div></form><div id="target-inventory"></div></section>`;
+  const form = $("#unifi-form");
+  const connectionData = () => {
+    const data = Object.fromEntries(new FormData(form));
+    return {
+      controller_url: data.controller_url.trim().replace(/\/$/, ""),
       api_prefix: data.api_prefix,
       site_id: s.site_id,
       verify_tls: !!data.verify_tls,
-      api_key: data.api_key || "",
-    });
+      api_key: (data.api_key || "").trim(),
+    };
+  };
+  const hasChanges = () => {
+    const data = connectionData();
+    return !!data.api_key || ["controller_url", "api_prefix", "verify_tls"].some(key => data[key] !== s[key]);
+  };
+  let revision = 0;
+  form.addEventListener("input", () => {
+    revision++;
+    sites = [];
+    $("#site").innerHTML = '<option value="">Test the connection to retrieve sites</option>';
+    $("#connection-result").textContent = "";
+  });
+  bindForm("unifi-form", async () => {
+    await api("/api/admin/unifi", "PUT", connectionData());
     await reloadConfig();
     unifiView();
-    toast("Connection settings saved. Test the connection to retrieve sites.");
+    toast(sites.length ? "Connection saved. Select your UniFi site below." : "Connection saved. Test the connection to retrieve sites.");
   });
   $("#test-unifi").onclick = async (event) => {
+    if (!form.reportValidity()) return;
+    const testedRevision = revision;
     event.target.disabled = true;
+    $("#connection-result").textContent = "Testing connection…";
     try {
-      const result = await api("/api/admin/unifi/test", "POST");
+      const result = await api("/api/admin/unifi/test", "POST", connectionData());
+      if (revision !== testedRevision || !form.isConnected) return;
       sites = result.sites;
-      await reloadConfig();
-      unifiView();
-      $("#connection-result").innerHTML =
-        '<p class="notice">Connected and authenticated. Select your UniFi site below.</p>';
+      $("#site").innerHTML = '<option value="">Choose a site</option>' + sites.map(site =>
+        `<option value="${esc(site.id)}" ${site.id === s.site_id ? "selected" : ""}>${esc(site.name)}</option>`
+      ).join("");
+      $("#connection-result").innerHTML = hasChanges()
+        ? '<p class="notice">Connected and authenticated. These settings have not been saved. Click Save connection to use them.</p>'
+        : '<p class="notice">Connected and authenticated. Select your UniFi site below.</p>';
     } catch (e) {
+      if (revision !== testedRevision || !form.isConnected) return;
       $("#connection-result").innerHTML =
         `<p class="error">${esc(e.message)}</p>`;
     } finally {
@@ -274,6 +297,7 @@ function unifiView() {
     }
   };
   bindForm("site-form", async (data) => {
+    if (hasChanges()) throw new Error("Save connection before selecting a site and discovering ports.");
     await api("/api/admin/unifi", "PUT", {
       controller_url: config.settings.controller_url,
       api_prefix: config.settings.api_prefix,

@@ -16,5 +16,5 @@ if __name__ == "__main__":
     with tempfile.TemporaryDirectory(prefix="netrevive-browser-") as directory:
         app = create_app(Bootstrap(database_path=str(Path(directory) / "test.db"), background=False))
         fake = FakeUniFi()
-        app.state.client_factory = lambda: fake
+        app.state.client_factory = lambda **kwargs: fake
         uvicorn.run(app, host="127.0.0.1", port=8019, access_log=False)

@@ -47,7 +47,19 @@ class UniFiClient:
             if method == "POST":
                 return None
             return response.json()
-        except (httpx.HTTPError, ValueError, TimeoutError):
+        except (httpx.HTTPError, ValueError, TimeoutError) as exc:
+            cause, seen = exc, set()
+            while cause is not None and id(cause) not in seen:
+                seen.add(id(cause))
+                if isinstance(cause, ssl.SSLCertVerificationError):
+                    raise UniFiError(
+                        "The controller's TLS certificate could not be verified. It may be self-signed, "
+                        "expired, or not valid for the Controller URL. Use a matching address and a "
+                        "certificate trusted by NetRevive, or explicitly disable certificate verification "
+                        "if you accept the risk of controller impersonation.",
+                        uncertain=method == "POST",
+                    ) from None
+                cause = cause.__cause__ or cause.__context__
             raise UniFiError(
                 "UniFi did not return a valid response. Check connectivity and TLS settings.",
                 uncertain=method == "POST",
