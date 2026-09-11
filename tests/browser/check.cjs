@@ -12,8 +12,19 @@ try{
    assert.equal(await page.locator('#theme-options').isVisible(),false);
  };
  page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(!r.url().startsWith('http://127.0.0.1:8019'))remote.push(r.url());});
+ const visitWithDelayedSession=async url=>{
+   let release;
+   const gate=new Promise(resolve=>{release=resolve;});
+   await page.route('**/api/session',async route=>{await gate;await route.continue();});
+   await page.goto(url,{waitUntil:'domcontentloaded'});
+   assert.equal((await page.locator('#app').textContent()).trim(),'Loading NetRevive…');
+   assert.equal(await page.locator('footer').count(),0);
+   const response=page.waitForResponse(r=>r.url().endsWith('/api/session'));
+   release();await response;
+   await page.unroute('**/api/session');
+ };
  await page.emulateMedia({colorScheme:'light'});
- await page.goto('http://127.0.0.1:8019/');
+ await visitWithDelayedSession('http://127.0.0.1:8019/');
  assert.equal(await page.locator('html').getAttribute('data-theme'),'light');
  await page.emulateMedia({colorScheme:'dark'});
  await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');
@@ -114,7 +125,7 @@ try{
  assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
  await button.focus();await page.keyboard.down('Space');await page.waitForTimeout(2250);await page.keyboard.up('Space');
  await page.locator('.activity').first().waitFor();assert.equal(await button.isDisabled(),true);
- await page.reload();await page.getByRole('button',{name:'Operator A, change user',exact:true}).waitFor();
+ await visitWithDelayedSession('http://127.0.0.1:8019/');await page.getByRole('button',{name:'Operator A, change user',exact:true}).waitFor();
  assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
  assert.equal(await page.locator('#current-operator').textContent(),'Operator A');
  assert.equal(await page.locator('#operator-dialog').evaluate(el=>el.open),false);
@@ -136,6 +147,26 @@ try{
  await page.setViewportSize({width:390,height:844});await page.screenshot({path:'test-results/dashboard-mobile.png',fullPage:true});
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
  await page.screenshot({path:'test-results/dashboard-mobile-dark.png',fullPage:true});
+ const mobileNavGap=await page.locator('.topbar nav').evaluate(el=>getComputedStyle(el).gap);
+ assert.equal(mobileNavGap,'20px');
+ await page.setViewportSize({width:1360,height:1000});
+ assert.equal(await page.locator('.topbar nav').evaluate(el=>getComputedStyle(el).gap),'28px');
+ let adminLeft;
+ for(const hash of ['general','unifi','groups']){
+   await page.goto('http://127.0.0.1:8019/admin#'+hash);
+   await page.locator('#admin-content .panel').first().waitFor();
+   const left=(await page.locator('.admin-heading').boundingBox()).x;
+   if(adminLeft!==undefined)assert.equal(left,adminLeft,hash+' tab shifts horizontally');
+   adminLeft=left;
+   if(hash==='groups'){
+     const spacing=await page.locator('#admin-content .panel').evaluate(el=>{
+       return el.querySelector('.section-head').getBoundingClientRect().top-el.getBoundingClientRect().top-parseFloat(getComputedStyle(el).paddingTop)-parseFloat(getComputedStyle(el).borderTopWidth);
+     });
+     assert.ok(Math.abs(spacing)<1,'Restart Groups has extra top spacing');
+     await page.screenshot({path:'test-results/admin-groups-spacing.png',fullPage:true});
+   }
+ }
+ await page.setViewportSize({width:390,height:844});
  await page.goto('http://127.0.0.1:8019/admin#history');
  assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
  await page.getByText('Restart history',{exact:true}).waitFor();await page.locator('summary').first().click();

@@ -1,4 +1,5 @@
 :root {
+  scrollbar-gutter: stable;
   color-scheme: light;
   --ink: #182b30;
   --muted: #5f7077;
@@ -138,7 +139,6 @@ main {
   max-width: 1100px;
   margin: 0 auto;
   padding: 42px 24px 64px;
-  min-height: calc(100vh - 165px);
 }
 .page-heading {
   display: flex;
@@ -284,6 +284,9 @@ p {
   justify-content: space-between;
   gap: 16px;
   margin: 32px 0 16px;
+}
+.panel > .section-head:first-child {
+  margin-top: 0;
 }
 .section-head h2 {
   margin: 0;
@@ -437,23 +440,6 @@ p {
 .badge.timed_out {
   color: var(--amber);
   background: var(--warning-bg);
-}
-footer {
-  max-width: 1100px;
-  margin: auto;
-  padding: 22px 24px;
-  display: flex;
-  gap: 16px;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 12px;
-}
-footer span:last-child {
-  margin-left: auto;
-}
-.footer-brand {
-  font-weight: 700;
-  color: var(--ink);
 }
 label {
   display: block;
@@ -754,7 +740,7 @@ th {
     padding: 0 18px;
   }
   .topbar nav {
-    gap: 18px;
+    gap: 20px;
   }
   .brand {
     font-size: 22px;
@@ -796,13 +782,6 @@ th {
   .list-row {
     align-items: flex-start;
     flex-wrap: wrap;
-  }
-  footer {
-    flex-wrap: wrap;
-    font-size: 12px;
-  }
-  footer span:nth-child(2) {
-    display: none;
   }
   .section-head {
     align-items: flex-start;
@@ -891,15 +870,10 @@ th {
 #current-operator {
   overflow-wrap: anywhere;
 }
-@media (max-width: 700px) {
-  .topbar nav {
-    gap: 12px;
-  }
-}
 @media (max-width: 420px) {
   .brand { font-size: 20px; }
   .brand-icon { width: 32px; height: 32px; margin-right: 8px; }
-  .topbar nav { gap: 8px; font-size: 12px; }
+  .topbar nav { gap: 20px; font-size: 12px; }
 }
 
 .admin-heading {
@@ -910,3 +884,7 @@ th {
   margin-bottom: 16px;
 }
 .admin-heading .dashboard-title { margin: 0; }
+
+@supports not (scrollbar-gutter: stable) {
+  html { overflow-y: scroll; }
+}

@@ -293,7 +293,6 @@ def create_app(bootstrap=None):
             context={
                 "csrf": request.state.session["csrf"],
                 "title": settings["title"],
-                "hostname": settings["hostname"],
                 "canonical": canonical,
             },
         )

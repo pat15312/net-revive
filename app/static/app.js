@@ -125,7 +125,7 @@ function adminView() {
     (setup
       ? `<div class="actions"><button class="secondary" id="wizard-back" ${wizardStep === 0 ? "disabled" : ""}>← Back</button><button class="primary" id="wizard-next">${wizardStep === 4 ? "Finish setup" : "Continue →"}</button><span class="help">Save your changes before continuing.</span></div>`
       : '');
-  $("#hostname").textContent = config.settings.hostname;
+
   if (!tabs.some((x) => x[0] === pageTab)) pageTab = "general";
   ({
     general: generalView,
@@ -189,12 +189,11 @@ async function reloadConfig() {
 function generalView() {
   const s = config.settings;
   $("#admin-content").innerHTML =
-    `<section class="panel"><h2>A familiar place to reconnect</h2><p>Give your dashboard a title and an easy-to-remember local address.</p><form id="general">${field("Application display title", "title", s.title, "text", 'required maxlength="80"')}${field("Friendly hostname or URL", "hostname", s.hostname, "text", 'required maxlength="253"')}${field("Display timezone", "timezone", s.timezone, "text", 'required list="timezones"')}<datalist id="timezones"><option value="Europe/London"><option value="Etc/UTC"><option value="America/New_York"><option value="America/Los_Angeles"><option value="Europe/Paris"><option value="Asia/Tokyo"><option value="Australia/Sydney"></datalist><div class="notice">Create a DNS record pointing <strong>${esc(s.hostname)}</strong> to the IP address of the NetRevive Docker host. Changing this setting does not create or modify a DNS record.</div><button class="primary" type="submit">Save general settings</button></form></section>`;
+    `<section class="panel"><h2>A familiar place to reconnect</h2><p>Give your dashboard a title and an easy-to-remember local address.</p><form id="general">${field("Application display title", "title", s.title, "text", 'required maxlength="80"')}${field("Friendly hostname or URL", "hostname", s.hostname, "text", 'required maxlength="253"')}${field("Display timezone", "timezone", s.timezone, "text", 'required list="timezones"')}<datalist id="timezones"><option value="Europe/London"><option value="Etc/UTC"><option value="America/New_York"><option value="America/Los_Angeles"><option value="Europe/Paris"><option value="Asia/Tokyo"><option value="Australia/Sydney"></datalist><div class="notice">This stores the preferred site address in page metadata. It does not create DNS records or change the address or port used to reach NetRevive. To use a friendly address, configure it separately in your local DNS and proxy.</div><button class="primary" type="submit">Save general settings</button></form></section>`;
   bindForm("general", async (data) => {
     await api("/api/admin/general", "PUT", data);
     await reloadConfig();
     generalView();
-    $("#hostname").textContent = config.settings.hostname;
     toast("General settings saved.");
   });
 }
@@ -606,7 +605,7 @@ async function refreshDashboard(initial = false) {
         updateButtons();
       });
     }
-    $("#hostname").textContent = data.hostname;
+
     if (!data.operators.some(user => user.name === currentOperator)) {
       currentOperator = "";
     }
