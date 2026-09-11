@@ -557,6 +557,7 @@ function savedOperator() {
     return "";
   }
 }
+let currentOperator = savedOperator();
 let clockOffset = 0,
   lastStatusAt = 0,
   refreshing = false;
@@ -575,24 +576,48 @@ async function refreshDashboard(initial = false) {
           "Check your connection. Restart equipment when you need to.",
           "Connected locally",
         ) +
-        `<section class="panel"><div id="network-health" aria-live="polite"></div><div class="status-grid" id="status-grid"></div></section><div class="section-head"><h2>Restart equipment</h2></div><section class="panel operator-row"><label for="operator">Who is restarting?</label><select id="operator"><option value="">Select your name</option></select></section><div id="restart-groups" class="group-grid"></div><div class="section-head"><h2>Recent activity</h2><span class="muted" id="last-checked"></span></div><section class="panel" id="activity" aria-live="polite"></section>`;
-      $("#operator").onchange = () => {
-        try {
-          localStorage.setItem("netrevive.operator", $("#operator").value);
-        } catch {}
-        updateButtons();
+        `<section class="panel"><div id="network-health" aria-live="polite"></div><div class="status-grid" id="status-grid"></div></section><div class="section-head restart-heading"><h2>Restart equipment</h2><div class="dashboard-user"><span id="current-operator"></span><button type="button" class="secondary small" id="change-operator">Change user</button></div></div><dialog id="operator-dialog" aria-labelledby="operator-title"><h2 id="operator-title">Who’s using NetRevive?</h2><p>Choose your name so restart activity is recorded correctly. We’ll remember it on this browser.</p><form id="operator-form"><label for="operator">Your name</label><select id="operator" name="operator" required><option value="">Select your name</option></select><p id="operator-empty" class="notice" hidden>No users are configured. Ask an administrator to add one in <a href="/admin#users">Admin → Users</a>.</p><div class="actions"><button type="submit" class="primary" id="confirm-operator">Open dashboard</button><button type="button" class="secondary" id="cancel-operator">Cancel</button></div></form></dialog><div id="restart-groups" class="group-grid"></div><div class="section-head"><h2>Recent activity</h2><span class="muted" id="last-checked"></span></div><section class="panel" id="activity" aria-live="polite"></section>`;
+      refreshDashboard.users = null;
+      refreshDashboard.groups = null;
+      $("#change-operator").onclick = showOperatorPicker;
+      $("#cancel-operator").onclick = () => {
+        if (currentOperator) $("#operator-dialog").close();
       };
+      $("#operator-dialog").addEventListener("cancel", event => {
+        if (!currentOperator) event.preventDefault();
+      });
+      $("#operator-dialog").addEventListener("close", updateButtons);
+      bindForm("operator-form", async selected => {
+        if (!dashboard.operators.some(user => user.name === selected.operator)) {
+          throw new Error("Choose a current user from the list.");
+        }
+        currentOperator = selected.operator;
+        try { localStorage.setItem("netrevive.operator", currentOperator); } catch {}
+        $("#current-operator").textContent = currentOperator;
+        $("#operator-dialog").close();
+        updateButtons();
+      });
     }
     $("#hostname").textContent = data.hostname;
-    const chosen = $("#operator").value || savedOperator();
+    if (!data.operators.some(user => user.name === currentOperator)) {
+      currentOperator = "";
+    }
+    $("#current-operator").textContent = currentOperator;
     if (JSON.stringify(data.operators) !== refreshDashboard.users) {
+      const pending = $("#operator").value || currentOperator;
       $("#operator").innerHTML =
         '<option value="">Select your name</option>' +
         data.operators
           .map((u) => `<option value="${esc(u.name)}">${esc(u.name)}</option>`)
           .join("");
-      $("#operator").value = chosen;
+      $("#operator").value = pending;
+      $("#operator-empty").hidden = data.operators.length > 0;
+      $("#confirm-operator").disabled = data.operators.length === 0;
       refreshDashboard.users = JSON.stringify(data.operators);
+    }
+    if (!currentOperator) {
+      $("#cancel-operator").hidden = true;
+      if (!$("#operator-dialog").open) showOperatorPicker();
     }
     const h = data.health;
     const guidance = {
@@ -677,8 +702,14 @@ async function refreshDashboard(initial = false) {
     refreshing = false;
   }
 }
+function showOperatorPicker() {
+  $("#operator").value = currentOperator;
+  $("#cancel-operator").hidden = !currentOperator;
+  $("#operator-dialog").showModal();
+  updateButtons();
+}
 function updateButtons() {
-  if (!dashboard || !$("#operator")) return;
+  if (!dashboard || !$("#restart-groups")) return;
   const now = Date.now() / 1000 + clockOffset;
   for (const group of dashboard.groups) {
     const button = document.querySelector(`[data-group="${group.id}"]`);
@@ -690,7 +721,8 @@ function updateButtons() {
       stale ||
       !group.available ||
       remaining > 0 ||
-      !$("#operator").value;
+      !currentOperator ||
+      $("#operator-dialog").open;
     if (button.disabled) button.dispatchEvent(new Event("cancelhold"));
     $("#hint-" + group.id).textContent = stale
       ? "Waiting for NetRevive to reconnect."
@@ -698,7 +730,7 @@ function updateButtons() {
         ? `${group.unavailable_reason} Available in ${duration(remaining)}.`
         : !group.available
           ? group.unavailable_reason
-          : !$("#operator").value
+          : !currentOperator
             ? "Select your name to continue."
             : "Hold for 2 seconds to restart";
   }
@@ -725,7 +757,7 @@ function bindHold(button) {
         const result = await api(
           `/api/groups/${button.dataset.group}/restart`,
           "POST",
-          { operator: $("#operator").value },
+          { operator: currentOperator },
         );
         toast(result.message);
       } catch (e) {

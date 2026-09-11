@@ -263,18 +263,18 @@ p {
   font-size: 14px;
   margin: 0;
 }
-.operator-row {
+.dashboard-user {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 20px 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 14px;
 }
-.operator-row label {
-  margin: 0;
+.restart-heading {
+  flex-wrap: wrap;
 }
-.operator-row select {
-  width: 250px;
+#operator-dialog {
+  width: min(440px, 90vw);
 }
 .group-grid {
   display: grid;
@@ -723,7 +723,13 @@ th {
   display: none !important;
 }
 @media (max-width: 700px) {
+  html {
+    scroll-padding-top: 84px;
+  }
   .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
     height: 72px;
     padding: 0 20px;
   }
@@ -759,14 +765,6 @@ th {
   }
   .group-grid {
     grid-template-columns: 1fr;
-  }
-  .operator-row {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .operator-row select {
-    width: 100%;
   }
   .fields {
     grid-template-columns: 1fr;
