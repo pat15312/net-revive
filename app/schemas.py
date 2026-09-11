@@ -149,6 +149,7 @@ class Group(StrictModel):
     lockout_seconds: int | None = Field(default=None, ge=10, le=86400)
     recovery_mode: str = "network"
     target_ids: list[int] = Field(min_length=1)
+    # Accepted for older clients; saving the group now confirms the chosen targets.
     confirm_targets: bool = False
 
     @field_validator("target_ids")

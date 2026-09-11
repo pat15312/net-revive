@@ -104,7 +104,6 @@ def group(targets=None, **kwargs):
         "name": "Router",
         "button_label": "Restart Router",
         "target_ids": targets or [1],
-        "confirm_targets": True,
         **kwargs,
     }
 

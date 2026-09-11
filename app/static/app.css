@@ -96,7 +96,7 @@ textarea:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 max(24px, calc((100vw - 1100px) / 2));
+  padding: 0 max(24px, calc((100% - 1100px) / 2 + 24px));
 }
 .brand {
   font-size: 24px;
@@ -751,7 +751,7 @@ th {
     top: 0;
     z-index: 5;
     height: 72px;
-    padding: 0 20px;
+    padding: 0 18px;
   }
   .topbar nav {
     gap: 18px;
@@ -834,13 +834,41 @@ th {
   line-height: 1.5;
   margin: 0 0 16px;
 }
-.topbar .theme-select {
-  width: auto;
-  min-width: 100px;
-  min-height: 44px;
+.theme-options {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  gap: 2px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.theme-options button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  min-width: 38px;
+  padding: 7px 10px;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
   font-size: 13px;
-  font-weight: 600;
+}
+.theme-options button[aria-pressed="true"] {
   background: var(--paper);
+  border-color: var(--line);
+  color: var(--ink);
+  box-shadow: 0 1px 3px #0001;
+}
+.theme-options button:hover {
+  color: var(--green);
+}
+@media (max-width: 700px) {
+  .theme-options button span { display: none; }
+  .theme-options button { padding: 7px; }
 }
 .dashboard-user button {
   display: inline-flex;

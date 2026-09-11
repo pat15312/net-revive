@@ -114,12 +114,9 @@ function adminView() {
   const setup = !config.setup_complete;
   if (setup) pageTab = wizardTabs[wizardStep];
   root.innerHTML =
-    heading(
-      setup ? "Set up NetRevive" : "Administration",
-      setup
-        ? "Build a safe, simple way to restart your network equipment."
-        : "Make recovery work for your network.",
-    ) +
+    (setup
+      ? heading("Set up NetRevive", "Build a safe, simple way to restart your network equipment.")
+      : '<h1 class="dashboard-title">Administration</h1>') +
     (setup
       ? `<div class="steps" aria-label="Setup progress">${wizardTabs.map((t, i) => `<span class="${i === wizardStep ? "current" : ""}">${i + 1}. ${tabs.find((x) => x[0] === t)[1]}</span>`).join("")}</div>`
       : `<nav class="tabs" aria-label="Admin sections">${tabs.map(([id, label]) => `<a class="${pageTab === id ? "active" : ""}" href="#${id}">${label}</a>`).join("")}</nav>`) +
@@ -399,7 +396,7 @@ function groupEditor(
   },
 ) {
   $("#group-editor").innerHTML =
-    `<section class="panel"><h2>${group.id ? "Edit restart group" : "New restart group"}</h2><form id="group-form"><div class="fields"><div>${field("Group name", "name", group.name, "text", 'required maxlength="80" placeholder="Router"')}</div><div>${field("Button label", "button_label", group.button_label, "text", 'required maxlength="80" placeholder="Restart Router"')}</div></div><label for="description">Description (optional)</label><textarea id="description" name="description" maxlength="500">${esc(group.description)}</textarea><div class="fields"><div>${field("Display order", "display_order", group.display_order, "number", 'required min="-100000" max="100000"')}</div><div>${field("Lockout in seconds (blank uses default)", "lockout_seconds", group.lockout_seconds ?? "", "number", 'min="10" max="86400"')}</div></div><label for="recovery_mode">Recovery monitoring</label><select id="recovery_mode" name="recovery_mode"><option value="network" ${group.recovery_mode === "network" ? "selected" : ""}>Network health — routers, modems & gateways</option><option value="none" ${group.recovery_mode === "none" ? "selected" : ""}>None — access points & other equipment</option></select><p class="help">Network health checks DNS and internet access from this server. It cannot confirm that an access point or another individual device is ready.</p>${check("Show this group on the dashboard", "enabled", group.enabled)}<label>Assigned PoE targets</label><div class="target-list">${config.targets.map((t) => `<label class="check"><input type="checkbox" name="target_ids" value="${t.id}" ${group.target_ids.includes(t.id) ? "checked" : ""}><span><strong>${esc(t.label || t.port_name || "Port " + t.port_number)}</strong><small>${esc(t.switch_name)} / Port ${t.port_number} ${!t.enabled ? "· Disabled" : !t.available ? "· Unavailable" : ""}</small></span></label>`).join("") || "<p>Discover your UniFi ports before creating a group.</p>"}</div><div class="notice warning">All selected PoE ports will be power-cycled when this Restart Group is triggered. Ensure every target is correct.</div>${check("I have checked and confirm all selected targets.", "confirm_targets")}<p class="help">A port may belong to several groups. Shared equipment lockouts protect every group that uses it.</p><div class="actions"><button class="primary" type="submit">Save restart group</button><button class="secondary" type="button" id="cancel-group">Cancel</button></div></form></section>`;
+    `<section class="panel"><h2>${group.id ? "Edit restart group" : "New restart group"}</h2><form id="group-form"><div class="fields"><div>${field("Group name", "name", group.name, "text", 'required maxlength="80" placeholder="Router"')}</div><div>${field("Button label", "button_label", group.button_label, "text", 'required maxlength="80" placeholder="Restart Router"')}</div></div><label for="description">Description (optional)</label><textarea id="description" name="description" maxlength="500">${esc(group.description)}</textarea><div class="fields"><div>${field("Display order", "display_order", group.display_order, "number", 'required min="-100000" max="100000"')}</div><div>${field("Lockout in seconds (blank uses default)", "lockout_seconds", group.lockout_seconds ?? "", "number", 'min="10" max="86400"')}</div></div><label for="recovery_mode">Recovery monitoring</label><select id="recovery_mode" name="recovery_mode"><option value="network" ${group.recovery_mode === "network" ? "selected" : ""}>Network health — routers, modems & gateways</option><option value="none" ${group.recovery_mode === "none" ? "selected" : ""}>None — access points & other equipment</option></select><p class="help">Network health checks DNS and internet access from this server. It cannot confirm that an access point or another individual device is ready.</p>${check("Show this group on the dashboard", "enabled", group.enabled)}<label>Assigned PoE targets</label><div class="target-list">${config.targets.map((t) => `<label class="check"><input type="checkbox" name="target_ids" value="${t.id}" ${group.target_ids.includes(t.id) ? "checked" : ""}><span><strong>${esc(t.label || t.port_name || "Port " + t.port_number)}</strong><small>${esc(t.switch_name)} / Port ${t.port_number} ${!t.enabled ? "· Disabled" : !t.available ? "· Unavailable" : ""}</small></span></label>`).join("") || "<p>Discover your UniFi ports before creating a group.</p>"}</div><div class="notice warning">All selected PoE ports will be power-cycled when this Restart Group is triggered. Ensure every target is correct.</div><div class="actions"><button class="primary" type="submit">Save restart group</button><button class="secondary" type="button" id="cancel-group">Cancel</button></div></form></section>`;
   $("#cancel-group").onclick = () => $("#group-editor").replaceChildren();
   bindForm("group-form", async (data, form) => {
     const payload = {
@@ -412,7 +409,6 @@ function groupEditor(
         data.lockout_seconds === "" ? null : Number(data.lockout_seconds),
       recovery_mode: data.recovery_mode,
       target_ids: new FormData(form).getAll("target_ids").map(Number),
-      confirm_targets: !!data.confirm_targets,
     };
     await api(
       "/api/admin/groups" + (group.id ? "/" + group.id : ""),
@@ -572,7 +568,7 @@ async function refreshDashboard(initial = false) {
     if (initial || !$("#network-health")) {
       root.innerHTML =
         `<h1 class="dashboard-title">${esc(data.title === "NetRevive" ? "Network overview" : data.title)}</h1>` +
-        `<section class="panel"><div id="network-health" aria-live="polite"></div><div class="status-grid" id="status-grid"></div></section><div class="section-head restart-heading"><h2>Restart equipment</h2><div class="dashboard-user"><button type="button" class="secondary small" id="change-operator" title="Change user" aria-haspopup="dialog" aria-controls="operator-dialog"><span id="current-operator">Choose user</span><span aria-hidden="true">⌄</span></button></div></div><dialog id="operator-dialog" aria-labelledby="operator-title"><h2 id="operator-title">Who’s using NetRevive?</h2><p>Choose your name so restart activity is recorded correctly. We’ll remember it on this browser.</p><form id="operator-form"><label for="operator">Your name</label><select id="operator" name="operator" required><option value="">Select your name</option></select><p id="operator-empty" class="notice" hidden>No users are configured. Ask an administrator to add one in <a href="/admin#users">Admin → Users</a>.</p><div class="actions"><button type="submit" class="primary" id="confirm-operator">Open dashboard</button><button type="button" class="secondary" id="cancel-operator">Cancel</button></div></form></dialog><div id="restart-groups" class="group-grid"></div><div class="section-head"><h2>Recent activity</h2><span class="muted" id="last-checked"></span></div><section class="panel" id="activity" aria-live="polite"></section>`;
+        `<section class="panel"><div id="network-health" aria-live="polite"></div><div class="status-grid" id="status-grid"></div></section><div class="section-head restart-heading"><h2>Restart equipment</h2><div class="dashboard-user"><button type="button" class="secondary small" id="change-operator" title="Change user" aria-haspopup="dialog" aria-controls="operator-dialog"><span id="current-operator">Choose user</span></button></div></div><dialog id="operator-dialog" aria-labelledby="operator-title"><h2 id="operator-title" tabindex="-1" autofocus>Who’s using NetRevive?</h2><p>Choose your name so restart activity is recorded correctly. We’ll remember it on this browser.</p><form id="operator-form"><label for="operator">Your name</label><select id="operator" name="operator" required><option value="">Select your name</option></select><p id="operator-empty" class="notice" hidden>No users are configured. Ask an administrator to add one in <a href="/admin#users">Admin → Users</a>.</p><div class="actions"><button type="submit" class="primary" id="confirm-operator">Open dashboard</button><button type="button" class="secondary" id="cancel-operator">Cancel</button></div></form></dialog><div id="restart-groups" class="group-grid"></div><div class="section-head"><h2>Recent activity</h2><span class="muted" id="last-checked"></span></div><section class="panel" id="activity" aria-live="polite"></section>`;
       refreshDashboard.users = null;
       refreshDashboard.groups = null;
       $("#change-operator").onclick = showOperatorPicker;
@@ -706,6 +702,7 @@ function showOperatorPicker() {
   $("#operator").value = currentOperator;
   $("#cancel-operator").hidden = !currentOperator;
   $("#operator-dialog").showModal();
+  $("#operator-title").focus({ preventScroll: true });
   updateButtons();
 }
 function updateButtons() {

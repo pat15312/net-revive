@@ -8,7 +8,7 @@ A **Restart Group** is a named action such as “Restart Router” or “Restart
 
 On your first dashboard visit, choose your name in the welcome dialog. NetRevive remembers it on this browser; click your name to switch users. Then hold a restart button for two seconds. Mouse, touch, Space and Enter are supported. Releasing early, leaving the button, losing focus or hiding the page cancels the hold. Operators are attribution labels, not authenticated identities.
 
-The theme selector in the top navigation offers **System** (the default), **Light**, and **Dark**. System follows your device’s current theme, including changes while the page is open. Light and Dark override it; choose System again to clear the override. Your preference is remembered on this browser across dashboard and Admin pages. Click the NetRevive logo to return to the dashboard.
+The appearance buttons in the top navigation offer **Dark**, **Light**, and **Auto** (the default). Auto follows your device’s current theme, including changes while the page is open. Light and Dark override it; choose Auto again to clear the override. Your preference is remembered on this browser across dashboard and Admin pages. Click the NetRevive logo to return to the dashboard.
 
 Each request is recorded with its group settings, operator, health state and target snapshots. A multi-port restart continues if an individual target fails. History distinguishes confirmed acceptance, rejection, unknown acceptance and requests that were never attempted. UniFi accepting a power-cycle request does **not** prove that the equipment has finished booting.
 
@@ -63,7 +63,7 @@ The container runs as UID/GID `10001`, drops capabilities, uses a read-only root
 2. Save the display title, friendly hostname and IANA display timezone.
 3. Enter the local controller's HTTPS URL, controller type and API key; test the entered details, then save the connection. Testing does not change the saved configuration.
 4. Choose a discovered site and select **Save site & discover ports**. Switch/port IDs come from UniFi, not manual text entry.
-5. Create a group, choose its targets, label the restart button, set recovery behaviour and explicitly confirm the selected ports.
+5. Create a group, choose its targets, label the restart button, set recovery behaviour and save.
 6. Add the initial operator names.
 7. Review health and restart settings, then finish setup. Completion rechecks the site's selected equipment.
 

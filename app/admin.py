@@ -208,8 +208,6 @@ def write_group(db, body, group_id=None):
         if group_id and not old:
             raise HTTPException(404, "Restart group not found.")
         previous = {t["id"] for t in group_targets(conn, group_id)} if group_id else set()
-        if previous != set(body.target_ids) and not body.confirm_targets:
-            raise HTTPException(422, "Explicitly confirm the assigned PoE targets.")
         for target_id in body.target_ids:
             target = conn.execute("SELECT * FROM targets WHERE id=?", (target_id,)).fetchone()
             if not target or not target["poe_capable"]:

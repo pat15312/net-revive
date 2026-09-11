@@ -153,19 +153,17 @@ def test_duplicate_association_rejected(inventory, app):
         conn.execute("INSERT INTO group_targets VALUES (?,1)", (gid,))
 
 
-def test_confirm_membership_changes(inventory):
-    assert inventory.request("POST", "/api/admin/groups", group(confirm_targets=False)).status_code == 422
-    gid = inventory.request("POST", "/api/admin/groups", group()).json()["id"]
-    assert (
-        inventory.request("PUT", f"/api/admin/groups/{gid}", group([1, 2], confirm_targets=False)).status_code
-        == 422
-    )
-    assert (
-        inventory.request(
-            "PUT", f"/api/admin/groups/{gid}", group(name="Renamed", confirm_targets=False)
-        ).status_code
-        == 200
-    )
+def test_save_membership_without_extra_confirmation(inventory):
+    response = inventory.request("POST", "/api/admin/groups", group())
+    assert response.status_code == 201
+    gid = response.json()["id"]
+    assert inventory.request("PUT", f"/api/admin/groups/{gid}", group([1, 2])).status_code == 200
+    saved = inventory.get("/api/admin/config").json()["groups"][0]
+    assert saved["target_ids"] == [1, 2]
+    # Older browser tabs can still submit the removed field.
+    assert inventory.request(
+        "PUT", f"/api/admin/groups/{gid}", group([1], confirm_targets=False)
+    ).status_code == 200
 
 
 @pytest.mark.parametrize("targets", [[999], []])
