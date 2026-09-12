@@ -275,6 +275,42 @@
     "secrets-before.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
     "zizmor-before.json": "1b45e8da2682334ab9df4f351b6e709a57bd2d246be316c17488dce322781d61",
     "bandit-before.json": "81a60b2d5298afdf61fa3b3b0905f17a21667b3629fb539e81ac72346c1ec683",
-    "dependencies-before.json": "ccb10c1f9f968b04771d730bd08b60eb566801b395415dc0979b93fc10da9efa"
+    "dependencies-before.json": "ccb10c1f9f968b04771d730bd08b60eb566801b395415dc0979b93fc10da9efa",
+    "secrets-layers.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+  },
+  "audited_final_code_workflow_commit": "2aa8de60d449756f6c422e90951dafeee2206eb5",
+  "application_remediation_commit": "d0882ff1124f433fe4381fc12b87647e5313b1c6",
+  "tests_passed": {
+    "local_pytest": 173,
+    "github_runner_pytest": 173,
+    "github_docker_pytest": 173,
+    "chromium_functional": true,
+    "chromium_security": true
+  },
+  "layer_secret_scan": {
+    "exported_layers": 10,
+    "regular_files": 6124,
+    "findings": 0,
+    "staged_diff_false_positives": "Two SHA-256 evidence checksums matched generic-api-key; not credentials"
+  },
+  "published_v0.1.0": {
+    "commit": "d0882ff1124f433fe4381fc12b87647e5313b1c6",
+    "digest": "sha256:072ab26382446a1d1042a579f4fda7e60602bdc1954e93e89899b53484b14822",
+    "workflow_run": 34663198758,
+    "result": "success",
+    "platforms": [
+      "linux/amd64",
+      "linux/arm64"
+    ]
+  },
+  "published_final_main": {
+    "commit": "2aa8de60d449756f6c422e90951dafeee2206eb5",
+    "digest": "sha256:db8eceb3468644a79a0fdcc8c5c7d39bb20fdba6aac3dd13e46ff7598027799a",
+    "workflow_run": 34663290845,
+    "result": "success",
+    "platforms": [
+      "linux/amd64",
+      "linux/arm64"
+    ]
   }
 }

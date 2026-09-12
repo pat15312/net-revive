@@ -248,7 +248,7 @@ Follow [operational security](docs/security-operations.md) for concrete settings
 
 ## 11. Final verification
 
-**Audited implementation commit:** `d0882ff1124f433fe4381fc12b87647e5313b1c6`. Production source/assets were individually hashed and matched the tested container. A final workflow follow-up disables automatic latest-tag generation on release-tag events; production application code is unchanged. The exact local image, dependency versions, database timestamps and scanner counts are also in [scan-summary.json](docs/security-evidence/scan-summary.json).
+**Audited final code/workflow commit:** `2aa8de60d449756f6c422e90951dafeee2206eb5`. Application remediation was introduced in `d0882ff1124f433fe4381fc12b87647e5313b1c6` (also release `v0.1.0`); the later commit changes only publication rules and audit documentation. Production source/assets were individually hashed and matched the tested container. A final workflow follow-up disables automatic latest-tag generation on release-tag events; production application code is unchanged. The exact local image, dependency versions, database timestamps and scanner counts are also in [scan-summary.json](docs/security-evidence/scan-summary.json).
 
 **Locally exercised image:** `net-revive:audit-final`, Docker image index ID `sha256:12822adf345dc94a012792d98ee4a192a28686d3c55c99494b34222cbbc277b2`, AMD64, 245,514,009 bytes. Registry publication evidence is recorded separately because build provenance and platform manifests give it a different digest.
 
@@ -265,3 +265,7 @@ Follow [operational security](docs/security-operations.md) for concrete settings
 ### Publication verification
 
 [Initial audited-build workflow](https://github.com/pat15312/net-revive/actions/runs/34662957803) passed both test and publish jobs. It ran 173 tests on the runner and 173 in Docker, built AMD64/ARM64, scanned each architecture, and promoted index `sha256:c2ab615fa48cb25fff0a220dac18521bbdb8b567d516e3c49e80ba4a3d52a60e`. Registry inspection confirmed separate SPDX SBOM and SLSA provenance v1 attestations for both platforms. This is build metadata, not a claim of independently signed publisher identity.
+
+[Versioned release workflow](https://github.com/pat15312/net-revive/actions/runs/34663198758) passed tests and both-platform scans. Published `ghcr.io/pat15312/net-revive:v0.1.0` resolves to `sha256:072ab26382446a1d1042a579f4fda7e60602bdc1954e93e89899b53484b14822`; its application code matches the audited implementation. Neither this release nor the main build was deployed to the live Pi during the audit.
+
+[Final code/workflow verification](https://github.com/pat15312/net-revive/actions/runs/34663290845) passed both jobs for `2aa8de60d449756f6c422e90951dafeee2206eb5`, including the complete test suite and both architecture scans. Final main image index: `sha256:db8eceb3468644a79a0fdcc8c5c7d39bb20fdba6aac3dd13e46ff7598027799a` (`ghcr.io/pat15312/net-revive:sha-2aa8de6`, also promoted to `latest`). The subsequent commit containing this final evidence record changes documentation only; it intentionally does not rebuild or replace the tested image.
