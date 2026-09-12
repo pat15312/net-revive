@@ -29,3 +29,5 @@ grype net-revive:audit-final -o cyclonedx-json
 ```
 
 Scanner databases change over time; reruns can legitimately produce different advisory counts. Raw reports were retained in the local audit workspace outside version control; the repository contains sanitized summaries and the complete image advisory list. No real credentials or production databases were copied into this evidence.
+
+Final image-layer leakage check: all 10 exported layers (6,124 regular files) and image configuration were scanned by Gitleaks with redaction, with zero findings. Two staged-diff alerts matched SHA-256 checksums of secret-scan evidence files, not credentials; both were reviewed as false positives.

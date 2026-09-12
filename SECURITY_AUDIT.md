@@ -169,7 +169,7 @@ With shared storage and a different bootstrap password, a second process could a
 
 Action tags/base tags were mutable; dependency files lacked artifact hashes; checkout credentials persisted; context exclusion did not cover every local deployment directory. An upstream tag rewrite or contaminated build context could affect a privileged build/published image. No actual compromise or secret-bearing published layer was found.
 
-**Fix:** pin action commits and base/emulation/BuildKit/SBOM images; hash-lock dependencies; narrow Docker context to explicit inputs; disable checkout credential persistence and package-manager caching; preserve least-privilege permissions and PR/publish separation. Build a candidate with SBOM/provenance, scan both architectures, then promote its digest without rebuilding. Release-tag commits must belong to main. Weekly Dependabot updates are configured.
+**Fix:** pin action commits and base/emulation/BuildKit/SBOM images; hash-lock dependencies; narrow Docker context to explicit inputs; disable checkout credential persistence and package-manager caching; preserve least-privilege permissions and PR/publish separation. Build a candidate with SBOM/provenance, scan both architectures, then promote its digest without rebuilding. Release-tag commits must belong to main. Automatic latest-tag generation is explicitly disabled so tagging an older release does not implicitly replace latest; the explicit latest tag belongs only to main pushes. Weekly Dependabot updates are configured.
 
 **Evidence:** actionlint/zizmor clean after remediation; initial zizmor findings reviewed; image history/context reviewed and redacted secret scans clean. GitHub account/branch enforcement is not verifiable from code. **Status: code/workflow hardening fixed; external governance remains operational.**
 
@@ -227,7 +227,9 @@ PRs run tests with read-only contents permission; they do not publish. Publishin
 
 The gate blocks **fixable** High/Critical advisories; all other results are printed for review, not ignored as “safe”. Candidate tags are not releases. Signed identity verification was not introduced: provenance/SBOM availability improves inspection but is not a substitute for independent signing, protected branches/tags or account security. Immutable digests provide stronger selection guarantees than mutable `latest`, `sha-*` or version-tag names. GitHub-owned runner/tool downloads and registry services remain supply-chain trust dependencies.
 
-Repository-level private reporting, branch protections, required checks/reviews, tag immutability, owner MFA and GHCR administrative controls could not be confirmed with available access. Recommended settings are documented rather than falsely asserted enabled.
+The metadata action [automatically adds latest for release-tag events](https://github.com/docker/metadata-action#latest-tag) unless its flavor disables this; the final review made that behavior explicit rather than relying only on the raw latest-tag condition.
+
+Repository-level private reporting, branch protections, required checks/reviews, tag immutability, owner MFA and GHCR administrative controls could not be confirmed with available access. The branch-protection API returned 403 (integration lacks access); the private-reporting endpoint was not available through the connector. Recommended settings are documented rather than falsely asserted enabled.
 
 ## 9. Residual risks
 
@@ -246,9 +248,11 @@ Follow [operational security](docs/security-operations.md) for concrete settings
 
 ## 11. Final verification
 
-Implementation commit, publication digest and final test count are recorded below after completing the final build. The exact local image, dependency versions, database timestamps and scanner counts are also in [scan-summary.json](docs/security-evidence/scan-summary.json).
+**Audited implementation commit:** `d0882ff1124f433fe4381fc12b87647e5313b1c6`. Production source/assets were individually hashed and matched the tested container. A final workflow follow-up disables automatic latest-tag generation on release-tag events; production application code is unchanged. The exact local image, dependency versions, database timestamps and scanner counts are also in [scan-summary.json](docs/security-evidence/scan-summary.json).
 
-- Functional/security pytest suite: **173 passed** locally with fake equipment (85 pre-audit tests plus 88 added cases); publication-workflow verification is recorded below.
+**Locally exercised image:** `net-revive:audit-final`, Docker image index ID `sha256:12822adf345dc94a012792d98ee4a192a28686d3c55c99494b34222cbbc277b2`, AMD64, 245,514,009 bytes. Registry publication evidence is recorded separately because build provenance and platform manifests give it a different digest.
+
+- Functional/security pytest suite: **173 passed** locally with fake equipment (85 pre-audit tests plus 88 added cases); GitHub runner and Docker test-stage runs also passed all 173 tests (two existing dependency deprecation warnings).
 - Chromium functional suite and browser attack harness passed; no production controller was contacted.
 - Bandit and Ruff security checks: clean after replacing fixed-table SQL interpolation with explicit query mappings (initial findings were reviewed false positives, not claimed SQL injection exploits).
 - Semgrep: 219 Python/JavaScript rules, 15 source targets, zero findings.
@@ -257,3 +261,7 @@ Implementation commit, publication digest and final test count are recorded belo
 - Final local container ran as UID/GID 10001, with zero capabilities, no-new-privileges, read-only code, private persistent database/key, no development tools, successful setup/login/settings and successful restart/persistence checks. Its network was disabled throughout runtime smoke testing.
 - One introduced file-permission issue was found by the production smoke test and corrected before final acceptance; local source modes no longer prevent non-root reads in the image.
 - Raw scan/test outputs remain in the local audit workspace; sanitized summaries, advisory inventory, SBOM, regressions and reproduction instructions are versioned. All changes were reread for security and accidental secret exposure.
+
+### Publication verification
+
+[Initial audited-build workflow](https://github.com/pat15312/net-revive/actions/runs/34662957803) passed both test and publish jobs. It ran 173 tests on the runner and 173 in Docker, built AMD64/ARM64, scanned each architecture, and promoted index `sha256:c2ab615fa48cb25fff0a220dac18521bbdb8b567d516e3c49e80ba4a3d52a60e`. Registry inspection confirmed separate SPDX SBOM and SLSA provenance v1 attestations for both platforms. This is build metadata, not a claim of independently signed publisher identity.

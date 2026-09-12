@@ -67,6 +67,7 @@ jobs:
         id: metadata
         with:
           images: ghcr.io/${{ steps.owner.outputs.name }}/net-revive
+          flavor: latest=false
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=ref,event=tag
