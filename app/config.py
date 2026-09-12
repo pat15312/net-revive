@@ -2,15 +2,27 @@
 
 import os
 from dataclasses import dataclass, field
+from pathlib import Path
+
+
+def secret_value(name):
+    value, filename = os.getenv(name, ""), os.getenv(name + "_FILE", "")
+    if value and filename:
+        raise RuntimeError(f"Set either {name} or {name}_FILE, not both.")
+    if filename:
+        value = Path(filename).read_text().strip()
+    return value
 
 
 @dataclass
 class Bootstrap:
     database_path: str = field(default_factory=lambda: os.getenv("DATABASE_PATH", "data/netrevive.db"))
-    admin_password: str = field(default_factory=lambda: os.getenv("ADMIN_PASSWORD", ""))
-    unifi_api_key: str = field(default_factory=lambda: os.getenv("UNIFI_API_KEY", ""))
-    secret_key: str = field(default_factory=lambda: os.getenv("SECRET_KEY", ""))
+    admin_password: str = field(default_factory=lambda: secret_value("ADMIN_PASSWORD"))
+    unifi_api_key: str = field(default_factory=lambda: secret_value("UNIFI_API_KEY"))
+    secret_key: str = field(default_factory=lambda: secret_value("SECRET_KEY"))
     secure_cookie: bool = field(default_factory=lambda: os.getenv("COOKIE_SECURE", "false").lower() == "true")
+    allowed_hosts: str = field(default_factory=lambda: os.getenv("ALLOWED_HOSTS", "localhost,net-revive.lan"))
+    unifi_ca_file: str = field(default_factory=lambda: os.getenv("UNIFI_CA_FILE", ""))
     background: bool = True
 
 

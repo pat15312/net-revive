@@ -218,9 +218,12 @@ class RestartService:
                     WHERE id=?""",
                     (now, event["id"]),
                 )
-                for table in ("targets", "restart_groups"):
+                for query in (
+                    "UPDATE targets SET active_event_id=NULL,locked_until=MAX(locked_until,?) WHERE active_event_id=?",
+                    "UPDATE restart_groups SET active_event_id=NULL,locked_until=MAX(locked_until,?) WHERE active_event_id=?",
+                ):
                     conn.execute(
-                        f"UPDATE {table} SET active_event_id=NULL,locked_until=MAX(locked_until,?) WHERE active_event_id=?",
+                        query,
                         (now + event["lockout_seconds"], event["id"]),
                     )
                 audit("restart_interrupted", event_id=event["id"])

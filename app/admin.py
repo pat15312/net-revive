@@ -73,7 +73,7 @@ def save_unifi(body: UniFiSettings, request: Request):
     with app.db.connect(write=True) as conn:
         no_dispatch(conn)
         changing_controller = setting(conn, "controller_url") not in ("", body.controller_url)
-        if changing_controller and not body.api_key and not app.bootstrap.unifi_api_key:
+        if changing_controller and (not body.api_key or app.bootstrap.unifi_api_key):
             raise HTTPException(
                 422, "Enter an API key when changing controller; stored keys are not sent to a new host."
             )
@@ -166,11 +166,19 @@ def edit_target(target_id: int, body: TargetEdit, request: Request):
 
 def ordered_ids(conn, table):
     # Table names are supplied only by the fixed internal mapping/call sites.
-    return [row[0] for row in conn.execute(f"SELECT id FROM {table} ORDER BY display_order,id")]
+    query = {
+        "operators": "SELECT id FROM operators ORDER BY display_order,id",
+        "restart_groups": "SELECT id FROM restart_groups ORDER BY display_order,id",
+    }[table]
+    return [row[0] for row in conn.execute(query)]
 
 
 def save_order(conn, table, ids):
-    conn.executemany(f"UPDATE {table} SET display_order=? WHERE id=?", enumerate(ids))
+    query = {
+        "operators": "UPDATE operators SET display_order=? WHERE id=?",
+        "restart_groups": "UPDATE restart_groups SET display_order=? WHERE id=?",
+    }[table]
+    conn.executemany(query, enumerate(ids))
 
 
 def append_order(conn, table):

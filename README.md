@@ -60,5 +60,6 @@ Configuration and history persist in the data volume. Back it up before updates;
 - [Restart safeguards and failure handling](docs/safety.md)
 - [Development and testing](docs/development.md)
 - [Verification notes](docs/verification.md)
+- [Security policy and audit](SECURITY.md)
 
 Built with Python, FastAPI, SQLite and vanilla JavaScript. [MIT licensed](LICENSE).

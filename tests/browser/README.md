@@ -17,3 +17,5 @@ NODE_PATH=/tmp/netrevive-browser-tools/node_modules node tests/browser/check.cjs
 ```
 
 Chromium may need its usual system libraries (`playwright install --with-deps chromium` on a supported Linux test host). Node and Chromium are development tools; they are not needed in the production container. Screenshots are written to ignored `test-results/`. The script checks setup, Admin settings, discovery, group/user creation, short-hold cancellation, keyboard restart, persistent lockout, remembered user, history, mobile overflow, external requests and JavaScript errors.
+
+After the functional suite, run `node tests/browser/security.cjs` with the same `NODE_PATH` against that disposable server. It tests stored XSS, cross-origin requests, framing and rebinding-style Host routing. It changes only synthetic test configuration and uses a second loopback server on port 8020.

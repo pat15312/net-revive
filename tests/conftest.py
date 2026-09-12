@@ -66,7 +66,7 @@ class Browser:
 
 @pytest.fixture
 def app(tmp_path):
-    instance = create_app(Bootstrap(database_path=str(tmp_path / "db.sqlite"), background=False))
+    instance = create_app(Bootstrap(database_path=str(tmp_path / "db.sqlite"), background=False, allowed_hosts="testserver,localhost"))
     instance.state.fake = FakeUniFi()
     instance.state.real_client_factory = instance.state.client_factory
     instance.state.client_factory = lambda **kwargs: instance.state.fake

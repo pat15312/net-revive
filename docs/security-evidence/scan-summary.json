@@ -1,0 +1,280 @@
+{
+  "date": "2026-09-12",
+  "baseline_commit": "4e72365ae859c9da6f590f14eacbdbadd8ca7a21",
+  "production_image": "sha256:12822adf345dc94a012792d98ee4a192a28686d3c55c99494b34222cbbc277b2 245514009 10001:10001",
+  "scanner_image_config_id": "sha256:3ba41cd5b7d062ac219bcf20bae3e08f4e7a2ccfaad9b0cb70e1ee0b5abfa526",
+  "scanner_image_manifest": "sha256:b628d15de7a8d33d92ad91a871a393f52202bce767ca7b3cdd40fca68e23d466",
+  "scanner": "Grype 0.118.0",
+  "scanner_database": {
+    "status": {
+      "schemaVersion": "v6.1.9",
+      "from": "https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.9_2026-09-11T00:32:28Z_1789108180.tar.zst?checksum=sha256%3A5ee62d5435c0861d878f614325552aa06185d47f1c5d106e983eddd70980b325",
+      "built": "2026-09-11T06:29:40Z",
+      "path": "/home/patrick/.cache/grype/db/6/vulnerability.db",
+      "valid": true
+    },
+    "providers": {
+      "alma": {
+        "captured": "2026-09-11T00:32:37Z",
+        "input": "xxh64:2d88987962346bf2"
+      },
+      "alpine": {
+        "captured": "2026-09-11T00:33:28Z",
+        "input": "xxh64:1c8f30d395549489"
+      },
+      "amazon": {
+        "captured": "2026-09-11T00:32:40Z",
+        "input": "xxh64:5b51583ac09a0722"
+      },
+      "arch": {
+        "captured": "2026-09-11T00:32:40Z",
+        "input": "xxh64:64d825007dc019ee"
+      },
+      "bitnami": {
+        "captured": "2026-09-11T00:32:39Z",
+        "input": "xxh64:7ff559ffa465a1c1"
+      },
+      "chainguard": {
+        "captured": "2026-09-11T00:32:45Z",
+        "input": "xxh64:e28e3c5a69f96ab3"
+      },
+      "chainguard-libraries": {
+        "captured": "2026-09-11T00:32:33Z",
+        "input": "xxh64:ec723fc0fb5e76a2"
+      },
+      "debian": {
+        "captured": "2026-09-11T00:33:45Z",
+        "input": "xxh64:cf009623fc4548ab"
+      },
+      "echo": {
+        "captured": "2026-09-11T00:32:38Z",
+        "input": "xxh64:9dfe292bd300fb7e"
+      },
+      "eol": {
+        "captured": "2026-09-11T00:32:53Z",
+        "input": "xxh64:5b753212e8bd18a4"
+      },
+      "epss": {
+        "captured": "2026-09-11T00:32:28Z",
+        "input": "xxh64:7e24ef7150106587"
+      },
+      "fedora": {
+        "captured": "2026-09-11T00:32:59Z",
+        "input": "xxh64:6038d8e026f8cc56"
+      },
+      "github": {
+        "captured": "2026-09-11T00:33:44Z",
+        "input": "xxh64:5e60c54595eb0df5"
+      },
+      "govulndb": {
+        "captured": "2026-09-11T00:33:09Z",
+        "input": "xxh64:7383743efb1e9f75"
+      },
+      "hummingbird": {
+        "captured": "2026-09-11T00:34:59Z",
+        "input": "xxh64:e2668e8e022a6065"
+      },
+      "kev": {
+        "captured": "2026-09-11T00:32:38Z",
+        "input": "xxh64:ce82aa26b40a7d43"
+      },
+      "mariner": {
+        "captured": "2026-09-11T00:33:06Z",
+        "input": "xxh64:1ffe9f21598a9b0c"
+      },
+      "minimos": {
+        "captured": "2026-09-11T00:32:48Z",
+        "input": "xxh64:e0c00e5afeaf38cc"
+      },
+      "nvd": {
+        "captured": "2026-09-11T00:33:36Z",
+        "input": "xxh64:40551c12e4252431"
+      },
+      "oracle": {
+        "captured": "2026-09-11T00:33:22Z",
+        "input": "xxh64:4c940634e23e317d"
+      },
+      "photon": {
+        "captured": "2026-09-11T00:32:57Z",
+        "input": "xxh64:b01ed7a3851f6503"
+      },
+      "rhel": {
+        "captured": "2026-09-11T00:34:09Z",
+        "input": "xxh64:cf08021b38539ee0"
+      },
+      "secureos": {
+        "captured": "2026-09-11T00:33:25Z",
+        "input": "xxh64:9ba0921525d609f9"
+      },
+      "sles": {
+        "captured": "2026-09-11T01:18:24Z",
+        "input": "xxh64:74e7dfd106ae5d7a"
+      },
+      "ubuntu": {
+        "captured": "2026-09-11T01:20:23Z",
+        "input": "xxh64:2d83526c8e829f07"
+      },
+      "wolfi": {
+        "captured": "2026-09-11T00:32:39Z",
+        "input": "xxh64:ba035facd85f18ed"
+      }
+    }
+  },
+  "baseline_image_matches": {
+    "Critical": 7,
+    "Medium": 48,
+    "High": 61,
+    "Negligible": 44,
+    "Low": 8,
+    "Unknown": 8
+  },
+  "final_image_matches": {
+    "Critical": 7,
+    "High": 58,
+    "Medium": 46,
+    "Negligible": 44,
+    "Low": 7,
+    "Unknown": 8
+  },
+  "runtime_dependencies": [
+    {
+      "name": "annotated-doc",
+      "version": "0.0.5",
+      "vulns": []
+    },
+    {
+      "name": "annotated-types",
+      "version": "0.8.0",
+      "vulns": []
+    },
+    {
+      "name": "anyio",
+      "version": "4.15.1",
+      "vulns": []
+    },
+    {
+      "name": "certifi",
+      "version": "2026.7.22",
+      "vulns": []
+    },
+    {
+      "name": "cffi",
+      "version": "2.1.1",
+      "vulns": []
+    },
+    {
+      "name": "click",
+      "version": "8.5.0",
+      "vulns": []
+    },
+    {
+      "name": "cryptography",
+      "version": "50.0.1",
+      "vulns": []
+    },
+    {
+      "name": "dnspython",
+      "version": "2.8.0",
+      "vulns": []
+    },
+    {
+      "name": "fastapi",
+      "version": "0.135.1",
+      "vulns": []
+    },
+    {
+      "name": "h11",
+      "version": "0.16.0",
+      "vulns": []
+    },
+    {
+      "name": "httpcore",
+      "version": "1.0.9",
+      "vulns": []
+    },
+    {
+      "name": "httpx",
+      "version": "0.28.1",
+      "vulns": []
+    },
+    {
+      "name": "idna",
+      "version": "3.19",
+      "vulns": []
+    },
+    {
+      "name": "jinja2",
+      "version": "3.1.6",
+      "vulns": []
+    },
+    {
+      "name": "markupsafe",
+      "version": "3.0.3",
+      "vulns": []
+    },
+    {
+      "name": "pycparser",
+      "version": "3.0",
+      "vulns": []
+    },
+    {
+      "name": "pydantic",
+      "version": "2.13.5",
+      "vulns": []
+    },
+    {
+      "name": "pydantic-core",
+      "version": "2.46.5",
+      "vulns": []
+    },
+    {
+      "name": "starlette",
+      "version": "1.6.0",
+      "vulns": []
+    },
+    {
+      "name": "typing-extensions",
+      "version": "4.16.0",
+      "vulns": []
+    },
+    {
+      "name": "typing-inspection",
+      "version": "0.4.4",
+      "vulns": []
+    },
+    {
+      "name": "uvicorn",
+      "version": "0.41.0",
+      "vulns": []
+    }
+  ],
+  "runtime_advisories_before": [
+    "GHSA-537c-gmf6-5ccf",
+    "PYSEC-2026-35",
+    "PYSEC-2026-3552",
+    "PYSEC-2026-3553",
+    "PYSEC-2026-3554",
+    "PYSEC-2026-36"
+  ],
+  "development_vulnerabilities_final": 0,
+  "raw_evidence_sha256": {
+    "syft-manifest.json": "34cd806373c76d03e615032a2ca350c04ba6fbbf1b70635e9d0a5a4dc1eb774b",
+    "buildkit-manifest.json": "fa0d423258f427f16da4efc49648cbf2e6fbf33d0eff9972ff46154747f88e75",
+    "qemu-manifest.json": "f5c3849906ea2ccfabd34c88f7f4a7c54a826693dceb31636d1d0b586986e5d4",
+    "secrets-app.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "semgrep-final.json": "44f287fb8255d9dcb9e5241a7c93ed200ace77fdf6f956713c33c2f5ad08202f",
+    "dependencies-dev-final.json": "17cfbc58cc49d8533ccd2aef9de1d5bfc6d6cfdd9a151af064ff5febf85dddd9",
+    "image-final.json": "8bdd82cce5f7af41d57de2d8d579aaa94dfd87a34af99c486963ff8ffdf6a477",
+    "bandit-after.json": "eef4f4b592e9aa3ef67ed496c68b4e48fa74e4f67d7a530061cff3267bdd88b5",
+    "image-after.json": "007e1653af7cea41edf3f62ae04552e3ee1bfedb763044234dc4f070f3c3ca8a",
+    "dependencies-dev.json": "bdcc6a098ec338a8f65f404d76203d6b4e1243c0891dbc4d5db3c7338bd4703c",
+    "dependencies-after.json": "a6fce5b60285ca7f30a11a894b7dd262bc91dfec82dcc4c8ce5344161c4da89b",
+    "zizmor-after.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "semgrep.json": "3073960c712b7fe86aacfab2839292ee64cc7c3e7be8efc55f8a255715a3fb26",
+    "image-before.json": "17d81a14a5c16ac8e8baed0be2eb4119162ad3c62407d26a87387c9c815b0667",
+    "secrets-before.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "zizmor-before.json": "1b45e8da2682334ab9df4f351b6e709a57bd2d246be316c17488dce322781d61",
+    "bandit-before.json": "81a60b2d5298afdf61fa3b3b0905f17a21667b3629fb539e81ac72346c1ec683",
+    "dependencies-before.json": "ccb10c1f9f968b04771d730bd08b60eb566801b395415dc0979b93fc10da9efa"
+  }
+}

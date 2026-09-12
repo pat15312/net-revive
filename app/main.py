@@ -2,6 +2,8 @@ import asyncio
 import fcntl
 import hmac
 import logging
+import secrets
+import sqlite3
 import time
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
@@ -13,7 +15,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from .admin import router as admin_router
-from .config import Bootstrap
+from .config import Bootstrap, DEFAULTS
+from .http_security import HTTPBoundary
 from .database import Database, put_setting, setting
 from .health import HealthMonitor
 from .logging import audit
@@ -24,6 +27,7 @@ from .security import (
     digest,
     hash_password,
     new_session,
+    insert_session,
     rate_limit,
     require_admin,
     verify_password,
@@ -37,13 +41,6 @@ def create_app(bootstrap=None):
     bootstrap = bootstrap or Bootstrap()
     db = Database(bootstrap.database_path)
     cipher = cipher_for(bootstrap)
-    with db.connect(write=True) as conn:
-        if bootstrap.admin_password:
-            if len(bootstrap.admin_password) < 12:
-                raise RuntimeError("ADMIN_PASSWORD must contain at least 12 characters.")
-            if not verify_password(bootstrap.admin_password, setting(conn, "admin_password_hash", "")):
-                put_setting(conn, "admin_password_hash", hash_password(bootstrap.admin_password))
-                conn.execute("DELETE FROM sessions")
 
     @asynccontextmanager
     async def lifespan(app):
@@ -54,6 +51,13 @@ def create_app(bootstrap=None):
         except OSError:
             lock.close()
             raise RuntimeError("Only one NetRevive process may use this database; run one worker.") from None
+        with db.connect(write=True) as conn:
+            if bootstrap.admin_password:
+                if len(bootstrap.admin_password) < 12:
+                    raise RuntimeError("ADMIN_PASSWORD must contain at least 12 characters.")
+                if not verify_password(bootstrap.admin_password, setting(conn, "admin_password_hash", "")):
+                    put_setting(conn, "admin_password_hash", hash_password(bootstrap.admin_password))
+                    conn.execute("DELETE FROM sessions")
         app.state.restart.reconcile_interrupted()
         audit("startup")
         monitor_task = asyncio.create_task(app.state.health.run()) if bootstrap.background else None
@@ -76,14 +80,20 @@ def create_app(bootstrap=None):
     app = FastAPI(title="NetRevive", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.db, app.state.bootstrap, app.state.cipher = db, bootstrap, cipher
 
+    controller_slots = asyncio.Semaphore(4)
+
     def client_factory(settings=None, api_key=None):
-        if api_key is None:
-            with db.connect() as conn:
+        # The saved origin, settings and key must come from the same read snapshot.
+        with db.connect() as conn:
+            conn.execute("BEGIN")
+            if settings is None:
+                settings = {key: setting(conn, key, value) for key, value in DEFAULTS.items()}
+            if api_key is None:
                 encrypted = setting(conn, "api_key_encrypted", "")
-            api_key = bootstrap.unifi_api_key or (
-                cipher.decrypt(encrypted.encode()).decode() if encrypted else ""
-            )
-        return UniFiClient(settings if settings is not None else db.settings(), api_key)
+                api_key = bootstrap.unifi_api_key or (
+                    cipher.decrypt(encrypted.encode()).decode() if encrypted else ""
+                )
+        return UniFiClient(settings, api_key, ca_file=bootstrap.unifi_ca_file, slots=controller_slots)
 
     app.state.client_factory = client_factory
     app.state.health = HealthMonitor(db, lambda: app.state.client_factory())
@@ -107,11 +117,21 @@ def create_app(bootstrap=None):
         if row:
             session = dict(row)
         else:
-            new_token, session = new_session(db)
+            session = {"admin": False, "csrf": secrets.token_urlsafe(32)}
+            if request.method == "GET" and request.url.path in ("/", "/admin", "/setup", "/api/session"):
+                try:
+                    rate_limit(
+                        db, "session:" + (request.client.host if request.client else "local"), maximum=60
+                    )
+                    rate_limit(db, "session:global", maximum=120)
+                    new_token, session = new_session(db)
+                except HTTPException as exc:
+                    return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
         request.state.session = session
         if request.method not in ("GET", "HEAD", "OPTIONS"):
             supplied = request.headers.get("x-csrf-token", "")
-            if not hmac.compare_digest(supplied, session["csrf"]):
+            if not hmac.compare_digest(supplied.encode(), session["csrf"].encode()):
+                audit("csrf_rejected")
                 return JSONResponse(
                     {"detail": "Session expired or CSRF token missing. Reload this page."}, status_code=403
                 )
@@ -150,17 +170,22 @@ def create_app(bootstrap=None):
             content={"detail": [{"loc": e["loc"], "msg": e["msg"], "type": e["type"]} for e in exc.errors()]},
         )
 
+    @app.exception_handler(sqlite3.Error)
+    async def database_error(request, exc):
+        audit("database_error")
+        return JSONResponse(
+            status_code=503, content={"detail": "Storage temporarily unavailable. Please try again."}
+        )
+
     @app.exception_handler(UniFiError)
     async def unifi_error(request, exc):
         return JSONResponse(status_code=502, content={"detail": str(exc)})
 
-    def authenticated_response(request):
-        with db.connect(write=True) as conn:
-            conn.execute(
-                "DELETE FROM sessions WHERE token_hash=?",
-                (digest(request.cookies.get("netrevive_session", "")),),
-            )
-        token, session = new_session(db, admin=True)
+    def authenticated_response(request, conn):
+        conn.execute(
+            "DELETE FROM sessions WHERE token_hash=?", (digest(request.cookies.get("netrevive_session", "")),)
+        )
+        token, session = insert_session(conn, admin=True)
         response = JSONResponse({"ok": True, "csrf": session["csrf"]})
         response.set_cookie(
             "netrevive_session",
@@ -183,8 +208,9 @@ def create_app(bootstrap=None):
                     409, "An administrator password is already set. Sign in to continue setup."
                 )
             put_setting(conn, "admin_password_hash", hash_password(body.password))
+            response = authenticated_response(request, conn)
         audit("admin_initialized")
-        return authenticated_response(request)
+        return response
 
     @app.post("/api/login")
     def login(body: Password, request: Request):
@@ -193,9 +219,16 @@ def create_app(bootstrap=None):
         with db.connect() as conn:
             stored = setting(conn, "admin_password_hash", "")
         if not verify_password(body.password, stored):
+            audit("admin_login_failed")
             raise HTTPException(401, "The administrator password is incorrect.")
+        with db.connect(write=True) as conn:
+            if setting(conn, "admin_password_hash", "") != stored:
+                raise HTTPException(401, "The administrator password is incorrect.")
+            if not stored.startswith("$argon2id$"):
+                put_setting(conn, "admin_password_hash", hash_password(body.password))
+            response = authenticated_response(request, conn)
         audit("admin_signed_in")
-        return authenticated_response(request)
+        return response
 
     @app.put("/api/admin/password")
     def change_password(body: ChangePassword, request: Request):
@@ -211,8 +244,9 @@ def create_app(bootstrap=None):
                 raise HTTPException(401, "The current password is incorrect.")
             put_setting(conn, "admin_password_hash", hash_password(body.new_password))
             conn.execute("DELETE FROM sessions WHERE admin=1")
+            response = authenticated_response(request, conn)
         audit("admin_password_changed")
-        return authenticated_response(request)
+        return response
 
     @app.post("/api/logout")
     def logout(request: Request):
@@ -221,6 +255,7 @@ def create_app(bootstrap=None):
                 "DELETE FROM sessions WHERE token_hash=?",
                 (digest(request.cookies.get("netrevive_session", "")),),
             )
+        audit("admin_signed_out")
         response = JSONResponse({"ok": True})
         response.delete_cookie("netrevive_session")
         return response
@@ -265,7 +300,11 @@ def create_app(bootstrap=None):
     @app.post("/api/groups/{group_id}/restart", status_code=202)
     async def restart(group_id: int, body: RestartRequest, request: Request):
         rate_limit(db, "restart:" + (request.client.host if request.client else "local"), maximum=10)
-        event_id = app.state.restart.admit(group_id, body.operator)
+        try:
+            event_id = app.state.restart.admit(group_id, body.operator)
+        except HTTPException as exc:
+            audit("restart_denied", status=exc.status_code)
+            raise
         app.state.restart.launch(event_id)
         return {
             "event_id": event_id,
@@ -294,6 +333,7 @@ def create_app(bootstrap=None):
 
     app.include_router(admin_router)
     app.mount("/static", StaticFiles(directory=str(ROOT / "static")), name="static")
+    app.add_middleware(HTTPBoundary, allowed_hosts=bootstrap.allowed_hosts)
     return app
 
 

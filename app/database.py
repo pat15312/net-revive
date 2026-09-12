@@ -77,7 +77,10 @@ def put_setting(conn, key, value):
 class Database:
     def __init__(self, path):
         self.path = str(path)
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        Path(path).parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+        os.fchmod(fd, 0o600)
+        os.close(fd)
         with self.connect() as conn:
             conn.execute("PRAGMA journal_mode=WAL")
             if conn.execute("PRAGMA user_version").fetchone()[0] > 1:

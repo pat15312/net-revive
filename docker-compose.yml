@@ -13,6 +13,11 @@ services:
       SECRET_KEY: ${SECRET_KEY:-}
       TZ: ${TZ:-Europe/London}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,net-revive.lan}
+      UNIFI_CA_FILE: ${UNIFI_CA_FILE:-}
+      ADMIN_PASSWORD_FILE: ${ADMIN_PASSWORD_FILE:-}
+      UNIFI_API_KEY_FILE: ${UNIFI_API_KEY_FILE:-}
+      SECRET_KEY_FILE: ${SECRET_KEY_FILE:-}
     volumes:
       - netrevive-data:/data
     read_only: true

@@ -11,13 +11,13 @@ Generate a local API key through your UniFi Network application's integration se
 | UniFi OS console | `/proxy/network/integration/v1` |
 | UniFi Network Server (standalone) | `/integration/v1` |
 
-Supply the controller **origin**, such as `https://controller.lan` or `https://controller.lan:8443`, without a path. An IP address is useful if local DNS might be affected. Keep TLS verification enabled where possible. For a private CA, build a derived image containing that CA in the system trust bundle; alternatively configure a local trusted certificate on the controller. Admin can explicitly disable verification for a self-signed controller, accepting the impersonation risk.
+Supply the controller **origin**, such as `https://controller.lan` or `https://controller.lan:8443`, without a path. An IP address is useful if local DNS might be affected. Keep TLS verification enabled where possible. For a private CA, mount its PEM certificate read-only and set `UNIFI_CA_FILE`; alternatively configure a local trusted certificate on the controller. Admin can explicitly disable verification for a self-signed controller, accepting the impersonation risk.
 
 Discovery preserves administrator labels, enabled flags, group memberships and lockouts. Missing/offline ports become unavailable; they are retained for review and history. PoE capability comes from the documented port `poe` object. UniFi does not document port display names in every release; NetRevive uses names when supplied and otherwise displays the port number. Add your own label in Admin.
 
 A group's selected ports must be available, enabled and PoE capable when saving an enabled group. Disabled targets are never silently omitted during a restart; a group containing one is unavailable until its configuration is corrected. At dispatch, every target is checked against live switch details before any power-cycle requests are sent. General health remains advisory, so a stale health failure does not permanently prevent a fresh validation/restart attempt.
 
-Changing the configured site does not move existing targets or groups to that site. Discover equipment and review group membership after changing sites. To avoid forwarding a saved credential to another controller, changing controller URL requires a newly supplied key unless the key is explicitly managed through the environment.
+Changing the configured site does not move existing targets or groups to that site. Discover equipment and review group membership after changing sites. To avoid forwarding a saved credential to another controller, changing controller URL requires a newly supplied key and an environment/file-managed key cannot silently follow a changed origin.
 
 
 ## Admin sections
@@ -26,7 +26,7 @@ Changing the configured site does not move existing targets or groups to that si
 - **Users:** add, edit and remove user names; use the up/down buttons to reorder them.
 - **Security:** change the administrator password using the current password. Other administrator sessions are signed out. Environment-managed passwords are changed through the container configuration.
 - **UniFi:** connection/key settings, site selection, connection test, discovery, target labels and enabled flags.
-- **Restart Groups:** create, edit, disable and delete groups; reorder them with up/down buttons; assign any number of discovered targets; customize buttons, descriptions, lockouts and recovery modes.
+- **Restart Groups:** create, edit, disable and delete groups; reorder them with up/down buttons; assign up to 256 discovered targets; customize buttons, descriptions, lockouts and recovery modes.
 - **Health Monitoring:** intervals, timeouts, stable-recovery checks, DNS names and IP connectivity destinations.
 - **Restart History:** paginated events, per-target details, pre-restart health, recovery outcomes and original configuration snapshots.
 
@@ -52,14 +52,14 @@ The status differentiates healthy connectivity, DNS trouble, internet trouble an
 
 Create a local DNS record pointing `net-revive.lan` (or your chosen hostname) to the Docker host. Configure your LAN DNS server/router; NetRevive does not change DNS records. If using the default port, browse to `http://net-revive.lan:8080`. For a portless URL, use a local reverse proxy or map host port 80 to container port 8080.
 
-Direct IP/alternate-host access is intentionally preserved for DNS failures; NetRevive does not redirect or enforce a Host allowlist. For HTTPS proxying, preserve `Host` and the original `Origin`, set `COOKIE_SECURE=true`, and configure Uvicorn to trust forwarded scheme headers **only from that proxy's IP**. The default command disables proxy headers; replace that option with `--proxy-headers --forwarded-allow-ips=<proxy-ip>` when deploying behind the proxy. No wildcard proxy trust is needed.
+Direct private-IP access is preserved for DNS failures. Other DNS names must be explicitly included in `ALLOWED_HOSTS`; see [operational security](security-operations.md). For HTTPS proxying, preserve `Host` and the original `Origin`, set `COOKIE_SECURE=true`, and configure Uvicorn to trust forwarded scheme headers **only from that proxy's IP**. The default command disables proxy headers; replace that option with `--proxy-headers --forwarded-allow-ips=<proxy-ip>` when deploying behind the proxy. No wildcard proxy trust is needed.
 
 
 ## Persistence, secrets and backup
 
 The `netrevive-data` named volume holds the SQLite database, its WAL/SHM files, the application process lock and an auto-generated encryption key when `SECRET_KEY` is omitted. Keep `DATABASE_PATH` inside `/data`. **Do not use `docker compose down -v` unless you intend to delete configuration and history.** SQLite must be on reliable local storage, not a network share with uncertain locking semantics.
 
-Bootstrap variables are documented in [.env.example](../.env.example). Application settings are editable without recreating a container. Passwords use salted scrypt. Sessions are random server-side tokens stored as hashes, expire after eight hours, and rotate on login. Database-managed API keys use authenticated Fernet encryption. Protect the volume and `.env`: encryption does not protect against someone who can read both the database and its encryption key.
+Bootstrap variables are documented in [.env.example](../.env.example). Application settings are editable without recreating a container. New passwords use Argon2id; legacy scrypt hashes upgrade on successful login. Sessions are random server-side tokens stored as hashes, expire after eight hours, and rotate on login. Database-managed API keys use authenticated Fernet encryption. Protect the volume and `.env`: encryption does not protect against someone who can read both the database and its encryption key.
 
 Make a consistent online backup with SQLite's backup API:
 

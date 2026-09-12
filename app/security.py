@@ -7,21 +7,32 @@ import time
 from pathlib import Path
 
 from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives.kdf.argon2 import Argon2id
+from cryptography.exceptions import InvalidKey
 from fastapi import HTTPException, Request
 
 
 def hash_password(password):
-    salt = secrets.token_bytes(16)
-    value = hashlib.scrypt(password.encode(), salt=salt, n=16384, r=8, p=1)
-    return base64.b64encode(salt + value).decode()
+    return Argon2id(
+        salt=secrets.token_bytes(16), length=32, iterations=2, lanes=1, memory_cost=19456
+    ).derive_phc_encoded(password.encode())
 
 
 def verify_password(password, encoded):
     try:
-        raw = base64.b64decode(encoded)
+        if encoded.startswith("$argon2id$"):
+            # Only our bounded parameters are accepted, including for damaged databases.
+            if not encoded.startswith("$argon2id$v=19$m=19456,t=2,p=1$"):
+                return False
+            Argon2id.verify_phc_encoded(password.encode(), encoded)
+            return True
+        # Backwards-compatible verification; a successful login upgrades this legacy hash.
+        raw = base64.b64decode(encoded, validate=True)
+        if len(raw) != 80:
+            return False
         value = hashlib.scrypt(password.encode(), salt=raw[:16], n=16384, r=8, p=1)
         return hmac.compare_digest(value, raw[16:])
-    except (ValueError, TypeError):
+    except (InvalidKey, ValueError, TypeError):
         return False
 
 
@@ -46,14 +57,23 @@ def digest(token):
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def new_session(db, admin=False):
+def insert_session(conn, admin=False):
     token, csrf = secrets.token_urlsafe(32), secrets.token_urlsafe(32)
-    with db.connect(write=True) as conn:
-        conn.execute("DELETE FROM sessions WHERE expires_at<?", (time.time(),))
-        conn.execute(
-            "INSERT INTO sessions VALUES (?,?,?,?)", (digest(token), csrf, admin, time.time() + 28800)
+    conn.execute("DELETE FROM sessions WHERE expires_at<?", (time.time(),))
+    if conn.execute("SELECT count(*) FROM sessions").fetchone()[0] >= 1024:
+        # Anonymous churn cannot fill the database indefinitely or evict administrator sessions.
+        removed = conn.execute(
+            "DELETE FROM sessions WHERE token_hash IN (SELECT token_hash FROM sessions WHERE admin=0 ORDER BY expires_at LIMIT 1)"
         )
+        if not removed.rowcount:
+            raise HTTPException(429, "Session capacity reached. Please try again later.")
+    conn.execute("INSERT INTO sessions VALUES (?,?,?,?)", (digest(token), csrf, admin, time.time() + 28800))
     return token, {"csrf": csrf, "admin": admin}
+
+
+def new_session(db, admin=False):
+    with db.connect(write=True) as conn:
+        return insert_session(conn, admin)
 
 
 def require_admin(request: Request):

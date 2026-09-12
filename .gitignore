@@ -17,3 +17,6 @@ node_modules/
 test-results/
 .sites-runtime/
 .DS_Store
+
+.local-deploy/
+private/

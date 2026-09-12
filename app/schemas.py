@@ -22,7 +22,7 @@ class ChangePassword(StrictModel):
 
 class General(StrictModel):
     title: str = Field(min_length=1, max_length=80)
-    timezone: str
+    timezone: str = Field(max_length=100)
 
     @field_validator("timezone")
     @classmethod
@@ -35,7 +35,7 @@ class General(StrictModel):
 
 
 class UniFiSettings(StrictModel):
-    controller_url: str
+    controller_url: str = Field(max_length=2048)
     api_prefix: str = "/proxy/network/integration/v1"
     site_id: str = ""
     verify_tls: bool = True
@@ -44,6 +44,8 @@ class UniFiSettings(StrictModel):
     @field_validator("controller_url")
     @classmethod
     def controller_valid(cls, value):
+        if any(ord(c) < 33 for c in value) or "\\" in value or "%" in value:
+            raise ValueError("Invalid controller origin.")
         parsed = urlsplit(value)
         if (
             parsed.scheme != "https"
@@ -135,7 +137,7 @@ class Group(StrictModel):
     display_order: int = Field(default=0, ge=-100000, le=100000)
     lockout_seconds: int | None = Field(default=None, ge=10, le=86400)
     recovery_mode: str = "network"
-    target_ids: list[int] = Field(min_length=1)
+    target_ids: list[int] = Field(min_length=1, max_length=256)
     # Accepted for older clients; saving the group now confirms the chosen targets.
     confirm_targets: bool = False
 

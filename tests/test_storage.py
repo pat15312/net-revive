@@ -48,7 +48,7 @@ def test_newer_schema_rejected(tmp_path):
 
 
 def test_secret_key_persists(tmp_path):
-    config = Bootstrap(database_path=str(tmp_path / "database.db"), background=False)
+    config = Bootstrap(database_path=str(tmp_path / "database.db"), background=False, allowed_hosts="testserver,localhost")
     first = create_app(config)
     ciphertext = first.state.cipher.encrypt(b"sample-private-key")
     second = create_app(config)

@@ -209,7 +209,7 @@ def test_target_edits_survive_discovery(inventory):
 
 def test_bootstrap_password_requires_auth(tmp_path):
     instance = create_app(
-        Bootstrap(database_path=str(tmp_path / "other.db"), admin_password=PASSWORD, background=False)
+        Bootstrap(database_path=str(tmp_path / "other.db"), admin_password=PASSWORD, background=False, allowed_hosts="testserver,localhost")
     )
     with TestClient(instance) as client:
         browser = Browser(client)
@@ -246,7 +246,7 @@ def test_connection_draft_uses_entered_values_without_saving(admin, app, monkeyp
     before = admin.get("/api/admin/config").json()
     calls = []
 
-    def factory(settings, api_key):
+    def factory(settings, api_key, **kwargs):
         calls.append((settings, api_key))
         return UniFiClient(
             settings,
