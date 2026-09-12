@@ -1,4 +1,5 @@
 :root {
+  --section-gap: 32px;
   scrollbar-gutter: stable;
   color-scheme: light;
   --ink: #182b30;
@@ -283,7 +284,7 @@ p {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin: 32px 0 16px;
+  margin: var(--section-gap) 0 16px;
 }
 .panel > .section-head:first-child {
   margin-top: 0;
@@ -536,6 +537,15 @@ input[type="checkbox"] {
 }
 .list-row:last-child {
   border: 0;
+}
+.list-row + #user-editor {
+  margin-top: var(--section-gap);
+}
+.panel > .list-row:last-child {
+  padding-bottom: 0;
+}
+.panel > .list-row:last-child > div > p:last-child {
+  margin-bottom: 0;
 }
 .list-row p {
   margin: 3px 0;
